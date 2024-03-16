@@ -30,16 +30,8 @@ main :: proc() {
 		}
 	}
 
+	stdin := os.stream_from_handle(os.stdin)
 
-	fmt.println("Monkey Lang")
-	// fmt.println(token.LPAREN)
+	monkey.start(stdin)
 
-	v := monkey.new_token(monkey.COMMA, ',')
-	defer monkey.delete_token(v)
-	// defer delete(v.literal)
-
-	fmt.println(v.type)
-	fmt.println(v.literal)
-	// stream := os.stream_from_handle(os.stdin)
-	// repl.start(stream)
 }

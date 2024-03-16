@@ -303,6 +303,7 @@ test_next_token5 :: proc(t: ^testing.T) {
 		}
 	}
 }
+
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
