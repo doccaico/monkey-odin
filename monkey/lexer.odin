@@ -38,17 +38,41 @@ next_token :: proc(l: ^Lexer) -> Token {
 
 	switch l.ch {
 	case '=':
-		tok = new_token(ASSIGN, l.ch)
+		if peek_char(l) == '=' {
+			read_char(l)
+			tok.type = EQ
+			tok.literal = "=="
+		} else {
+			tok = new_token(ASSIGN, l.ch)
+		}
+	case '+':
+		tok = new_token(PLUS, l.ch)
+	case '-':
+		tok = new_token(MINUS, l.ch)
+	case '!':
+		if peek_char(l) == '=' {
+			read_char(l)
+			tok.type = NOT_EQ
+			tok.literal = "!="
+		} else {
+			tok = new_token(BANG, l.ch)
+		}
+	case '/':
+		tok = new_token(SLASH, l.ch)
+	case '*':
+		tok = new_token(ASTERISK, l.ch)
+	case '<':
+		tok = new_token(LT, l.ch)
+	case '>':
+		tok = new_token(GT, l.ch)
 	case ';':
 		tok = new_token(SEMICOLON, l.ch)
+	case ',':
+		tok = new_token(COMMA, l.ch)
 	case '(':
 		tok = new_token(LPAREN, l.ch)
 	case ')':
 		tok = new_token(RPAREN, l.ch)
-	case ',':
-		tok = new_token(COMMA, l.ch)
-	case '+':
-		tok = new_token(PLUS, l.ch)
 	case '{':
 		tok = new_token(LBRACE, l.ch)
 	case '}':
@@ -101,5 +125,13 @@ is_digit :: proc(ch: byte) -> bool {
 skip_whitespace :: proc(l: ^Lexer) {
 	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
 		read_char(l)
+	}
+}
+
+peek_char :: proc(l: ^Lexer) -> byte {
+	if l.read_position >= len(l.input) {
+		return 0
+	} else {
+		return l.input[l.read_position]
 	}
 }

@@ -10,14 +10,15 @@ INT :: "INT"
 // Operators
 ASSIGN :: "="
 PLUS :: "+"
-// MINUS :: "-"
-// ASTERISK :: "*"
-// SLASH :: "/"
-// BANG :: "!"
-// LT :: "<"
-// GT :: ">"
-// EQ :: "=="
-// NOT_EQ :: "!="
+MINUS :: "-"
+BANG :: "!"
+ASTERISK :: "*"
+SLASH :: "/"
+
+LT :: "<"
+GT :: ">"
+EQ :: "=="
+NOT_EQ :: "!="
 
 // Delimiters
 COMMA :: ","
@@ -33,22 +34,21 @@ RBRACE :: "}"
 // Keywords
 FUNCTION :: "FUNCTION"
 LET :: "LET"
-// IF :: "IF"
-// ELSE :: "ELSE"
-// RETURN :: "RETURN"
-// TRUE :: "TRUE"
-// FALSE :: "FALSE"
+TRUE :: "TRUE"
+FALSE :: "FALSE"
+IF :: "IF"
+ELSE :: "ELSE"
+RETURN :: "RETURN"
 
 keywords := map[string]TokenType {
-	"fn"  = FUNCTION,
-	"let" = LET,
-	// "if" = IF,
-	// "else" = ELSE,
-	// "true" = TRUE,
-	// "false" = FALSE,
-	// "return" = RETURN,
+	"fn"     = FUNCTION,
+	"let"    = LET,
+	"true"   = TRUE,
+	"false"  = FALSE,
+	"if"     = IF,
+	"else"   = ELSE,
+	"return" = RETURN,
 }
-
 
 TokenType :: distinct string
 
@@ -66,7 +66,7 @@ new_token :: proc(token_type: TokenType, ch: byte) -> Token {
 
 delete_token :: proc(tok: Token) {
 	switch tok.type {
-	case EOF, INT, FUNCTION, LET, IDENT:
+	case EOF, INT, FUNCTION, LET, IDENT, TRUE, FALSE, IF, ELSE, RETURN, EQ, NOT_EQ:
 		return
 	case:
 		delete(tok.literal)

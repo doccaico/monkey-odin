@@ -136,6 +136,173 @@ test_next_token2 :: proc(t: ^testing.T) {
 	}
 }
 
+test_next_token3 :: proc(t: ^testing.T) {
+
+	input := `
+  !-/*5;
+  5 < 10 > 5;
+  `
+
+	tests := []struct {
+		expected_type:    TokenType,
+		expected_literal: string,
+	} {
+		{BANG, "!"},
+		{MINUS, "-"},
+		{SLASH, "/"},
+		{ASTERISK, "*"},
+		{INT, "5"},
+		{SEMICOLON, ";"},
+		{INT, "5"},
+		{LT, "<"},
+		{INT, "10"},
+		{GT, ">"},
+		{INT, "5"},
+		{SEMICOLON, ";"},
+		{EOF, ""},
+	}
+
+	l := new_lexer(input)
+	defer delete_lexer(l)
+
+	for tt, i in tests {
+		tok := next_token(l)
+		defer delete_token(tok)
+
+		if tok.type != tt.expected_type {
+			testing.errorf(
+				t,
+				"tests[%d] - tokentype wrong. expected=%q, got=%q",
+				i,
+				tt.expected_type,
+				tok.type,
+			)
+		}
+
+		if tok.literal != tt.expected_literal {
+			testing.errorf(
+				t,
+				"tests[%d] - literal wrong. expected=%q, got=%q",
+				i,
+				tt.expected_literal,
+				tok.literal,
+			)
+		}
+	}
+}
+
+test_next_token4 :: proc(t: ^testing.T) {
+
+	input := `
+  if (5 < 10) {
+    return true;
+  } else {
+    return false;
+  }`
+
+	tests := []struct {
+		expected_type:    TokenType,
+		expected_literal: string,
+	} {
+		{IF, "if"},
+		{LPAREN, "("},
+		{INT, "5"},
+		{LT, "<"},
+		{INT, "10"},
+		{RPAREN, ")"},
+		{LBRACE, "{"},
+		{RETURN, "return"},
+		{TRUE, "true"},
+		{SEMICOLON, ";"},
+		{RBRACE, "}"},
+		{ELSE, "else"},
+		{LBRACE, "{"},
+		{RETURN, "return"},
+		{FALSE, "false"},
+		{SEMICOLON, ";"},
+		{RBRACE, "}"},
+		{EOF, ""},
+	}
+
+	l := new_lexer(input)
+	defer delete_lexer(l)
+
+	for tt, i in tests {
+		tok := next_token(l)
+		defer delete_token(tok)
+
+		if tok.type != tt.expected_type {
+			testing.errorf(
+				t,
+				"tests[%d] - tokentype wrong. expected=%q, got=%q",
+				i,
+				tt.expected_type,
+				tok.type,
+			)
+		}
+
+		if tok.literal != tt.expected_literal {
+			testing.errorf(
+				t,
+				"tests[%d] - literal wrong. expected=%q, got=%q",
+				i,
+				tt.expected_literal,
+				tok.literal,
+			)
+		}
+	}
+}
+
+test_next_token5 :: proc(t: ^testing.T) {
+
+	input := `
+  10 == 10;
+  10 != 9;
+  `
+
+	tests := []struct {
+		expected_type:    TokenType,
+		expected_literal: string,
+	} {
+		{INT, "10"},
+		{EQ, "=="},
+		{INT, "10"},
+		{SEMICOLON, ";"},
+		{INT, "10"},
+		{NOT_EQ, "!="},
+		{INT, "9"},
+		{SEMICOLON, ";"},
+		{EOF, ""},
+	}
+
+	l := new_lexer(input)
+	defer delete_lexer(l)
+
+	for tt, i in tests {
+		tok := next_token(l)
+		defer delete_token(tok)
+
+		if tok.type != tt.expected_type {
+			testing.errorf(
+				t,
+				"tests[%d] - tokentype wrong. expected=%q, got=%q",
+				i,
+				tt.expected_type,
+				tok.type,
+			)
+		}
+
+		if tok.literal != tt.expected_literal {
+			testing.errorf(
+				t,
+				"tests[%d] - literal wrong. expected=%q, got=%q",
+				i,
+				tt.expected_literal,
+				tok.literal,
+			)
+		}
+	}
+}
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
@@ -168,6 +335,7 @@ test_lexer_main :: proc(t: ^testing.T) {
 
 	run_test(t, "[RUN] test_next_token1", test_next_token1)
 	run_test(t, "[RUN] test_next_token2", test_next_token2)
-	// run_test(t, "[RUN] test_next_token", test_next_token)
-
+	run_test(t, "[RUN] test_next_token3", test_next_token3)
+	run_test(t, "[RUN] test_next_token4", test_next_token4)
+	run_test(t, "[RUN] test_next_token5", test_next_token5)
 }
