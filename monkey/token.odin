@@ -39,6 +39,16 @@ LET :: "LET"
 // TRUE :: "TRUE"
 // FALSE :: "FALSE"
 
+keywords := map[string]TokenType {
+	"fn"  = FUNCTION,
+	"let" = LET,
+	// "if" = IF,
+	// "else" = ELSE,
+	// "true" = TRUE,
+	// "false" = FALSE,
+	// "return" = RETURN,
+}
+
 
 TokenType :: distinct string
 
@@ -55,37 +65,17 @@ new_token :: proc(token_type: TokenType, ch: byte) -> Token {
 }
 
 delete_token :: proc(tok: Token) {
-	if tok.type == EOF {
+	switch tok.type {
+	case EOF, INT, FUNCTION, LET, IDENT:
 		return
+	case:
+		delete(tok.literal)
 	}
-	delete(tok.literal)
 }
 
-next_token :: proc(l: ^Lexer) -> Token {
-	tok: Token
-
-	switch l.ch {
-	case '=':
-		tok = new_token(ASSIGN, l.ch)
-	case ';':
-		tok = new_token(SEMICOLON, l.ch)
-	case '(':
-		tok = new_token(LPAREN, l.ch)
-	case ')':
-		tok = new_token(RPAREN, l.ch)
-	case ',':
-		tok = new_token(COMMA, l.ch)
-	case '+':
-		tok = new_token(PLUS, l.ch)
-	case '{':
-		tok = new_token(LBRACE, l.ch)
-	case '}':
-		tok = new_token(RBRACE, l.ch)
-	case 0:
-		tok.literal = ""
-		tok.type = EOF
+lookup_ident :: proc(ident: string) -> TokenType {
+	if tok, ok := keywords[ident]; ok {
+		return tok
 	}
-
-	read_char(l)
-	return tok
+	return IDENT
 }
