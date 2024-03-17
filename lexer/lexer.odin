@@ -62,7 +62,6 @@ Lexer :: struct {
 	position:      int,
 	read_position: int,
 	ch:            byte,
-	// tokens:        [dynamic]Token,
 	illegals:      [dynamic]string,
 }
 
@@ -73,29 +72,12 @@ string_from_byte :: proc(ch: byte) -> string {
 	return transmute(string)buf
 }
 
-new_token :: proc(token_type: TokenType, ch: byte) -> Token {
-	buf := make([]u8, 1)
-	buf[0] = ch
-	// https://odin-lang.org/docs/overview/#from-u8-to-x
-	return Token{type = token_type, literal = transmute(string)buf}
-}
-
-delete_literal :: proc(type: TokenType, literal: string) {
-	switch type {
-	case EOF, INT, FUNCTION, LET, IDENT, TRUE, FALSE, IF, ELSE, RETURN, EQ, NOT_EQ:
-		return
-	case:
-		delete(literal)
-	}
-}
-
 lookup_ident :: proc(ident: string) -> TokenType {
 	if tok, ok := keywords[ident]; ok {
 		return tok
 	}
 	return IDENT
 }
-
 
 new_lexer :: proc(input: string) -> ^Lexer {
 	l := new(Lexer)
@@ -105,9 +87,6 @@ new_lexer :: proc(input: string) -> ^Lexer {
 }
 
 delete_lexer :: proc(l: ^Lexer) {
-	// for illegal in l.illegals {
-	// 	delete(illegal)
-	// }
 	delete(l.illegals)
 	free(l)
 }
