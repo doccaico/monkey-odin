@@ -1,6 +1,7 @@
 package parser
 
 import "core:fmt"
+import "core:strconv"
 import "core:strings"
 
 import "../ast"
@@ -49,7 +50,8 @@ new_parser :: proc(l: ^lexer.Lexer) -> ^Parser {
 	next_token(p)
 	next_token(p)
 
-	p.prefix_parse_fns[lexer.IDENT] = parse_ident
+	register_prefix(p, lexer.IDENT, parse_ident)
+	register_prefix(p, lexer.INT, parse_int_literal)
 
 	return p
 }
@@ -167,6 +169,22 @@ parse_ident :: proc(p: ^Parser) -> ^ast.Expr {
 	expr := ast.new_node(ast.Ident)
 	expr.token = p.cur_token
 	expr.value = p.cur_token.literal
+
+	return expr
+}
+
+parse_int_literal :: proc(p: ^Parser) -> ^ast.Expr {
+	expr := ast.new_node(ast.Int_Literal)
+	expr.token = p.cur_token
+
+	value, ok := strconv.parse_i64(p.cur_token.literal)
+	if !ok {
+		msg := fmt.tprintf("could not parse %q as integer", p.cur_token.literal)
+		append(&p.errors, msg)
+		return nil
+	}
+
+	expr.value = value
 
 	return expr
 }

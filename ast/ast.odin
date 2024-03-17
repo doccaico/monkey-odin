@@ -18,7 +18,7 @@ Any_Node :: union {
 
 	// Exprs
 	^Ident,
-	// ^Int_Literal,
+	^Int_Literal,
 	// ^String_Literal,
 	// ^Bool_Literal,
 	// ^Prefix_Expr,
@@ -79,6 +79,12 @@ Ident :: struct {
 	using node: Expr,
 	token:      lexer.Token,
 	value:      string,
+}
+
+Int_Literal :: struct {
+	using node: Expr,
+	token:      lexer.Token,
+	value:      i64,
 }
 
 new_node :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
@@ -146,7 +152,8 @@ token_literal :: proc(node: Node) -> string {
 	// case ^Block_Stmt: return block_stmt_string(v)
 	case ^Ident:
 		return ident_token_literal(v)
-	// case ^Int_Literal: return int_literal_string(v)
+	case ^Int_Literal:
+		return int_literal_token_literal(v)
 	// case ^String_Literal: return string_literal_string(v)
 	// case ^Bool_Literal: return bool_literal_string(v)
 	// case ^Prefix_Expr: return prefix_expr_string(v)
@@ -186,6 +193,10 @@ ident_token_literal :: proc(e: ^Ident) -> string {
 	return e.token.literal
 }
 
+int_literal_token_literal :: proc(e: ^Int_Literal) -> string {
+	return e.token.literal
+}
+
 // to_string
 
 to_string :: proc(node: Node) -> string {
@@ -202,8 +213,8 @@ to_string :: proc(node: Node) -> string {
 	// 	return block_stmt_string(v)
 	case ^Ident:
 		return ident_to_string(v)
-	// case ^Int_Literal:
-	// 	return int_literal_string(v)
+	case ^Int_Literal:
+		return int_literal_to_string(v)
 	// case ^String_Literal:
 	// 	return string_literal_string(v)
 	// case ^Bool_Literal:
@@ -287,4 +298,8 @@ ident_to_string :: proc(e: ^Ident) -> string {
 	//
 	// return bytes.buffer_to_string(&out)
 	return e.value
+}
+
+int_literal_to_string :: proc(e: ^Int_Literal) -> string {
+	return e.token.literal
 }
