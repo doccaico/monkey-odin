@@ -34,7 +34,7 @@ test_let_stmts :: proc(t: ^testing.T) {
 	defer delete_parser(p)
 
 	program := parse_program(p)
-	defer delete_program(program)
+	defer ast.delete_program(program)
 
 	check_parser_errors(t, p)
 
@@ -43,7 +43,7 @@ test_let_stmts :: proc(t: ^testing.T) {
 	}
 	if len(program.statements) != 3 {
 		fmt.panicf(
-			"program.Statements does not contain 3 statements. got=%d",
+			"program.statements does not contain 3 statements. got=%d",
 			len(program.statements),
 		)
 	}
@@ -104,13 +104,13 @@ test_return_stmts :: proc(t: ^testing.T) {
 	defer delete_parser(p)
 
 	program := parse_program(p)
-	defer delete_program(program)
+	defer ast.delete_program(program)
 
 	check_parser_errors(t, p)
 
 	if len(program.statements) != 3 {
 		fmt.panicf(
-			"program.Statements does not contain 3 statements. got=%d",
+			"program.statements does not contain 3 statements. got=%d",
 			len(program.statements),
 		)
 	}
@@ -128,6 +128,51 @@ test_return_stmts :: proc(t: ^testing.T) {
 				ast.token_literal(return_stmt),
 			)
 		}
+	}
+}
+
+test_ident_expr :: proc(t: ^testing.T) {
+	input := "foobar;"
+
+	l := lexer.new_lexer(input)
+	defer lexer.delete_lexer(l)
+
+	p := new_parser(l)
+	defer delete_parser(p)
+
+	program := parse_program(p)
+	defer ast.delete_program(program)
+
+	check_parser_errors(t, p)
+
+	if len(program.statements) != 1 {
+		fmt.panicf(
+			"program.statements does not enough statements. got=%d",
+			len(program.statements),
+		)
+	}
+	stmt, ok_stmt := program.statements[0].derived.(^ast.Expr_Stmt)
+	if !ok_stmt {
+		fmt.panicf(
+			"program.statements[0].derived is not ^ast.Expr_Stmt. got=%T",
+			program.statements[0],
+		)
+	}
+
+	ident, ok_ident := stmt.expr.derived.(^ast.Ident)
+	if !ok_ident {
+		fmt.panicf("exp not ^ast.Ident. got=%T", stmt.expr)
+	}
+	if ident.value != "foobar" {
+		testing.errorf(t, "ident.value not %s. got=%s", "foobar", ident.value)
+	}
+	if ast.token_literal(ident) != "foobar" {
+		testing.errorf(
+			t,
+			"ast.token_literal(ident) not %s. got=%s",
+			"foobar",
+			ast.token_literal(ident),
+		)
 	}
 }
 
@@ -163,4 +208,5 @@ test_parser_main :: proc(t: ^testing.T) {
 
 	run_test(t, "[RUN] test_let_stmts", test_let_stmts)
 	run_test(t, "[RUN] test_return_stmts", test_return_stmts)
+	run_test(t, "[RUN] test_ident_expr", test_ident_expr)
 }

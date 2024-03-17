@@ -96,7 +96,9 @@ delete_program :: proc(program: ^Program) {
 		// case ^ast.Program:
 		// 	fmt.printf("case Program\n")
 		// 	return program_token_literal(v)
-		// case ^Expr_Stmt: return expr_stmt_string(v)
+		case ^Expr_Stmt:
+			// fmt.println("In Expr_Stmt")
+			free(t.expr)
 		case ^Let_Stmt:
 			// fmt.println("In Let_Stmt")
 			free(t.name)
@@ -106,7 +108,8 @@ delete_program :: proc(program: ^Program) {
 			free(t.return_value)
 		// case ^Block_Stmt: return block_stmt_string(v)
 		// case ^Ident:
-		// 	return ident_token_literal(v)
+		// 	fmt.printf("In Ident")
+		// return ident_token_literal(v)
 		// case ^Int_Literal: return int_literal_string(v)
 		// case ^String_Literal: return string_literal_string(v)
 		// case ^Bool_Literal: return bool_literal_string(v)
