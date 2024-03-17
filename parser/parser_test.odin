@@ -18,7 +18,7 @@ check_parser_errors :: proc(t: ^testing.T, p: ^Parser) {
 	for msg in errors {
 		testing.errorf(t, "parser error: %q", msg)
 	}
-	// testing.fail_now(t)
+	testing.fail_now(t)
 }
 
 test_let_stmts :: proc(t: ^testing.T) {
