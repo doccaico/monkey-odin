@@ -1,8 +1,11 @@
-package monkey
+package repl
 
 import "core:bufio"
 import "core:fmt"
 import "core:io"
+
+import "../lexer"
+// import "../parser"
 
 PROMPT :: ">> "
 
@@ -18,19 +21,18 @@ start :: proc(stdin: io.Stream) {
 		line, err := bufio.reader_read_string(&r, '\n')
 		defer delete(line)
 
-		// Ctrl+ z
+		// Ctrl + z (on Windows)
 		if err != nil {
 			break
 		}
 
-		l := new_lexer(line)
-		defer delete_lexer(l)
+		l := lexer.new_lexer(line)
+		defer lexer.delete_lexer(l)
 
 		for {
-			tok := next_token(l)
-			defer delete_token(tok)
+			tok := lexer.next_token(l)
 
-			if tok.type == EOF {
+			if tok.type == lexer.EOF {
 				break
 			}
 
