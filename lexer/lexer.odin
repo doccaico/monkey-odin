@@ -1,12 +1,91 @@
-package monkey
+package lexer
 
-// import "core:fmt"
+import "core:fmt"
+
+ILLEGAL :: "ILLEGAL"
+EOF :: "EOF"
+// Identifiers and lierals
+IDENT :: "IDENT"
+INT :: "INT"
+// Operators
+ASSIGN :: "="
+PLUS :: "+"
+MINUS :: "-"
+BANG :: "!"
+ASTERISK :: "*"
+SLASH :: "/"
+
+LT :: "<"
+GT :: ">"
+EQ :: "=="
+NOT_EQ :: "!="
+
+// Delimiters
+COMMA :: ","
+SEMICOLON :: ";"
+LPAREN :: "("
+RPAREN :: ")"
+LBRACE :: "{"
+RBRACE :: "}"
+// COLON :: ":"
+// LBRACKET :: "["
+// RBRACKET :: "]"
+
+// Keywords
+FUNCTION :: "FUNCTION"
+LET :: "LET"
+TRUE :: "TRUE"
+FALSE :: "FALSE"
+IF :: "IF"
+ELSE :: "ELSE"
+RETURN :: "RETURN"
+
+keywords := map[string]TokenType {
+	"fn"     = FUNCTION,
+	"let"    = LET,
+	"true"   = TRUE,
+	"false"  = FALSE,
+	"if"     = IF,
+	"else"   = ELSE,
+	"return" = RETURN,
+}
+
+TokenType :: distinct string
+
+Token :: struct {
+	type:    TokenType,
+	literal: string,
+}
 
 Lexer :: struct {
 	input:         string,
 	position:      int,
 	read_position: int,
 	ch:            byte,
+	tokens:        [dynamic]Token,
+}
+
+new_token :: proc(token_type: TokenType, ch: byte) -> Token {
+	buf := make([]u8, 1)
+	buf[0] = ch
+	// https://odin-lang.org/docs/overview/#from-u8-to-x
+	return Token{type = token_type, literal = transmute(string)buf}
+}
+
+delete_literal :: proc(type: TokenType, literal: string) {
+	switch type {
+	case EOF, INT, FUNCTION, LET, IDENT, TRUE, FALSE, IF, ELSE, RETURN, EQ, NOT_EQ:
+		return
+	case:
+		delete(literal)
+	}
+}
+
+lookup_ident :: proc(ident: string) -> TokenType {
+	if tok, ok := keywords[ident]; ok {
+		return tok
+	}
+	return IDENT
 }
 
 
@@ -17,8 +96,12 @@ new_lexer :: proc(input: string) -> ^Lexer {
 	return l
 }
 
-delete_lexer :: proc(lexer: ^Lexer) {
-	free(lexer)
+delete_lexer :: proc(l: ^Lexer) {
+	for tok in l.tokens {
+		delete_literal(tok.type, tok.literal)
+	}
+	delete(l.tokens)
+	free(l)
 }
 
 read_char :: proc(l: ^Lexer) {
@@ -30,6 +113,7 @@ read_char :: proc(l: ^Lexer) {
 	l.position = l.read_position
 	l.read_position += 1
 }
+
 
 next_token :: proc(l: ^Lexer) -> Token {
 	tok: Token
@@ -84,10 +168,12 @@ next_token :: proc(l: ^Lexer) -> Token {
 		if is_letter(l.ch) {
 			tok.literal = read_identifier(l)
 			tok.type = lookup_ident(tok.literal)
+			append(&l.tokens, tok)
 			return tok
 		} else if is_digit(l.ch) {
 			tok.literal = read_number(l)
 			tok.type = INT
+			append(&l.tokens, tok)
 			return tok
 		} else {
 			tok = new_token(ILLEGAL, l.ch)
@@ -95,6 +181,8 @@ next_token :: proc(l: ^Lexer) -> Token {
 	}
 
 	read_char(l)
+
+	append(&l.tokens, tok)
 	return tok
 }
 

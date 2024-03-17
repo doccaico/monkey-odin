@@ -1,22 +1,42 @@
-package monkey
+package parser
 
 import "core:fmt"
 import "core:mem"
 import "core:testing"
 
-test_let_stmts :: proc(t: ^testing.T) {
-	input := `
-  let x = 5;
-  let y = 10;
-  let foobar = 838383;
-  `
+import "../ast"
+import "../lexer"
+import "../parser"
 
-	l := new_lexer(input)
-	defer delete_lexer(l)
+check_parser_errors :: proc(t: ^testing.T, p: ^Parser) {
+	errors := errors(p)
+	if len(errors) == 0 {
+		return
+	}
+
+	testing.errorf(t, "parser has %d errors", len(errors))
+	for msg in errors {
+		testing.errorf(t, "parser error: %q", msg)
+	}
+	// testing.fail_now(t)
+}
+
+test_let_stmts :: proc(t: ^testing.T) {
+	input := `let x = 5;
+	let y = 10;
+	let foobar = 838383;
+	`
+
+	l := lexer.new_lexer(input)
+	defer lexer.delete_lexer(l)
+
 	p := new_parser(l)
 	defer delete_parser(p)
 
 	program := parse_program(p)
+	defer delete_program(program)
+
+	check_parser_errors(t, p)
 
 	if program == nil {
 		fmt.panicf("ParseProgram() returned nil")
@@ -38,34 +58,41 @@ test_let_stmts :: proc(t: ^testing.T) {
 			return
 		}
 	}
-
 }
 
-test_let_stmt :: proc(t: ^testing.T, s: ^Stmt, name: string) -> bool {
+test_let_stmt :: proc(t: ^testing.T, s: ^ast.Stmt, name: string) -> bool {
 
-	if token_literal(s.expr_base) != "let" {
-		// testing.errorf(t, "s.TokenLiteral not 'let'. got=%q", s.TokenLiteral())
-		testing.errorf(t, "s.TokenLiteral not 'let'. got=%q", "punk")
+	if ast.token_literal(s.expr_base) != "let" {
+		testing.errorf(
+			t,
+			"ast.token_literal(s.expr_base) not 'let'. got=%q",
+			ast.token_literal(s.expr_base),
+		)
 		return false
 	}
 
-	// letStmt, ok := s.(*ast.LetStatement)
-	// if !ok {
-	//   t.Errorf("s not *ast.LetStatement. got=%T", s)
-	//   return false
-	// }
-	//
-	// if letStmt.Name.Value != name {
-	//   t.Errorf("letStmt.Name.Value not '%s'. got=%s", name, letStmt.Name.Value)
-	//   return false
-	// }
-	//
-	// if letStmt.Name.TokenLiteral() != name {
-	//   t.Errorf("s.Name not '%s'. got=%s", name, letStmt.Name)
-	//   return false
-	// }
+	let_stmt, ok := s.derived.(^ast.Let_Stmt)
+	if !ok {
+		testing.errorf(t, "s.derived not ^ast.Let_Stmt. got=%T", s)
+		return false
+	}
+
+	if let_stmt.name.value != name {
+		testing.errorf(t, "let_stmt.name.value not '%s'. got=%s", name, let_stmt.name.value)
+		return false
+	}
+
+	if ast.token_literal(let_stmt.name) != name {
+		testing.errorf(t, "ast.token_literal(let_stmt.name) not '%s'. got=%s", name, let_stmt.name)
+		return false
+	}
 
 	return true
+}
+
+run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
+	fmt.println(msg)
+	func(t)
 }
 
 @(test)

@@ -4,9 +4,10 @@ import "core:fmt"
 import "core:mem"
 import "core:os"
 
-import "monkey"
+import "repl"
 
 main :: proc() {
+
 
 	when ODIN_DEBUG {
 		track: mem.Tracking_Allocator
@@ -32,6 +33,6 @@ main :: proc() {
 
 	stdin := os.stream_from_handle(os.stdin)
 
-	monkey.start(stdin)
+	repl.start(stdin)
 
 }

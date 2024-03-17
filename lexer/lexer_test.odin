@@ -1,4 +1,4 @@
-package monkey
+package lexer
 
 import "core:fmt"
 import "core:mem"
@@ -28,11 +28,9 @@ test_next_token1 :: proc(t: ^testing.T) {
 
 	for tt, i in tests {
 		tok := next_token(l)
-		defer delete_token(tok)
 
 		if tok.type != tt.expected_type {
-			testing.errorf(
-				t,
+			fmt.panicf(
 				"tests[%d] - tokentype wrong. expected=%q, got=%q",
 				i,
 				tt.expected_type,
@@ -41,8 +39,7 @@ test_next_token1 :: proc(t: ^testing.T) {
 		}
 
 		if tok.literal != tt.expected_literal {
-			testing.errorf(
-				t,
+			fmt.panicf(
 				"tests[%d] - literal wrong. expected=%q, got=%q",
 				i,
 				tt.expected_literal,
@@ -112,11 +109,9 @@ test_next_token2 :: proc(t: ^testing.T) {
 
 	for tt, i in tests {
 		tok := next_token(l)
-		defer delete_token(tok)
 
 		if tok.type != tt.expected_type {
-			testing.errorf(
-				t,
+			fmt.panicf(
 				"tests[%d] - tokentype wrong. expected=%q, got=%q",
 				i,
 				tt.expected_type,
@@ -125,8 +120,7 @@ test_next_token2 :: proc(t: ^testing.T) {
 		}
 
 		if tok.literal != tt.expected_literal {
-			testing.errorf(
-				t,
+			fmt.panicf(
 				"tests[%d] - literal wrong. expected=%q, got=%q",
 				i,
 				tt.expected_literal,
@@ -167,11 +161,9 @@ test_next_token3 :: proc(t: ^testing.T) {
 
 	for tt, i in tests {
 		tok := next_token(l)
-		defer delete_token(tok)
 
 		if tok.type != tt.expected_type {
-			testing.errorf(
-				t,
+			fmt.panicf(
 				"tests[%d] - tokentype wrong. expected=%q, got=%q",
 				i,
 				tt.expected_type,
@@ -180,8 +172,7 @@ test_next_token3 :: proc(t: ^testing.T) {
 		}
 
 		if tok.literal != tt.expected_literal {
-			testing.errorf(
-				t,
+			fmt.panicf(
 				"tests[%d] - literal wrong. expected=%q, got=%q",
 				i,
 				tt.expected_literal,
@@ -229,11 +220,9 @@ test_next_token4 :: proc(t: ^testing.T) {
 
 	for tt, i in tests {
 		tok := next_token(l)
-		defer delete_token(tok)
 
 		if tok.type != tt.expected_type {
-			testing.errorf(
-				t,
+			fmt.panicf(
 				"tests[%d] - tokentype wrong. expected=%q, got=%q",
 				i,
 				tt.expected_type,
@@ -242,8 +231,7 @@ test_next_token4 :: proc(t: ^testing.T) {
 		}
 
 		if tok.literal != tt.expected_literal {
-			testing.errorf(
-				t,
+			fmt.panicf(
 				"tests[%d] - literal wrong. expected=%q, got=%q",
 				i,
 				tt.expected_literal,
@@ -280,11 +268,9 @@ test_next_token5 :: proc(t: ^testing.T) {
 
 	for tt, i in tests {
 		tok := next_token(l)
-		defer delete_token(tok)
 
 		if tok.type != tt.expected_type {
-			testing.errorf(
-				t,
+			fmt.panicf(
 				"tests[%d] - tokentype wrong. expected=%q, got=%q",
 				i,
 				tt.expected_type,
@@ -293,8 +279,7 @@ test_next_token5 :: proc(t: ^testing.T) {
 		}
 
 		if tok.literal != tt.expected_literal {
-			testing.errorf(
-				t,
+			fmt.panicf(
 				"tests[%d] - literal wrong. expected=%q, got=%q",
 				i,
 				tt.expected_literal,

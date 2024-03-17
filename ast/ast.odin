@@ -1,8 +1,10 @@
-package monkey
+package ast
 
 import "core:fmt"
 import "core:intrinsics"
 import "core:mem"
+
+import "../lexer"
 
 Any_Node :: union {
 	^Program,
@@ -53,7 +55,7 @@ Program :: struct {
 
 Let_Stmt :: struct {
 	using node: Stmt,
-	token:      Token,
+	token:      lexer.Token,
 	name:       ^Ident,
 	value:      ^Expr,
 }
@@ -62,7 +64,7 @@ Let_Stmt :: struct {
 
 Ident :: struct {
 	using node: Expr,
-	token:      Token,
+	token:      lexer.Token,
 	value:      string,
 }
 
@@ -119,7 +121,6 @@ token_literal :: proc(node: Node) -> string {
 
 program_token_literal :: proc(p: ^Program) -> string {
 	if len(p.statements) > 0 {
-		// return p.Statements[0].token_literal()
 		return token_literal(p.statements[0])
 	} else {
 		return ""
