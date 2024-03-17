@@ -62,7 +62,15 @@ Lexer :: struct {
 	position:      int,
 	read_position: int,
 	ch:            byte,
-	tokens:        [dynamic]Token,
+	// tokens:        [dynamic]Token,
+	illegals:      [dynamic]string,
+}
+
+string_from_byte :: proc(ch: byte) -> string {
+	// https://odin-lang.org/docs/overview/#from-u8-to-x
+	buf := make([]u8, 1)
+	buf[0] = ch
+	return transmute(string)buf
 }
 
 new_token :: proc(token_type: TokenType, ch: byte) -> Token {
@@ -97,10 +105,10 @@ new_lexer :: proc(input: string) -> ^Lexer {
 }
 
 delete_lexer :: proc(l: ^Lexer) {
-	for tok in l.tokens {
-		delete_literal(tok.type, tok.literal)
-	}
-	delete(l.tokens)
+	// for illegal in l.illegals {
+	// 	delete(illegal)
+	// }
+	delete(l.illegals)
 	free(l)
 }
 
@@ -127,62 +135,78 @@ next_token :: proc(l: ^Lexer) -> Token {
 			tok.type = EQ
 			tok.literal = "=="
 		} else {
-			tok = new_token(ASSIGN, l.ch)
+			tok.type = ASSIGN
+			tok.literal = "="
 		}
 	case '+':
-		tok = new_token(PLUS, l.ch)
+		tok.type = PLUS
+		tok.literal = "+"
 	case '-':
-		tok = new_token(MINUS, l.ch)
+		tok.type = MINUS
+		tok.literal = "-"
 	case '!':
 		if peek_char(l) == '=' {
 			read_char(l)
 			tok.type = NOT_EQ
 			tok.literal = "!="
 		} else {
-			tok = new_token(BANG, l.ch)
+			tok.type = BANG
+			tok.literal = "!"
 		}
 	case '/':
-		tok = new_token(SLASH, l.ch)
+		tok.type = SLASH
+		tok.literal = "/"
 	case '*':
-		tok = new_token(ASTERISK, l.ch)
+		tok.type = ASTERISK
+		tok.literal = "*"
 	case '<':
-		tok = new_token(LT, l.ch)
+		tok.type = LT
+		tok.literal = "<"
 	case '>':
-		tok = new_token(GT, l.ch)
+		tok.type = GT
+		tok.literal = ">"
 	case ';':
-		tok = new_token(SEMICOLON, l.ch)
+		tok.type = SEMICOLON
+		tok.literal = ";"
 	case ',':
-		tok = new_token(COMMA, l.ch)
+		tok.type = COMMA
+		tok.literal = ","
 	case '(':
-		tok = new_token(LPAREN, l.ch)
+		tok.type = LPAREN
+		tok.literal = "("
 	case ')':
-		tok = new_token(RPAREN, l.ch)
+		tok.type = RPAREN
+		tok.literal = ")"
 	case '{':
-		tok = new_token(LBRACE, l.ch)
+		tok.type = LBRACE
+		tok.literal = "{"
 	case '}':
-		tok = new_token(RBRACE, l.ch)
+		tok.type = RBRACE
+		tok.literal = "}"
 	case 0:
-		tok.literal = ""
 		tok.type = EOF
+		tok.literal = ""
 	case:
 		if is_letter(l.ch) {
 			tok.literal = read_identifier(l)
 			tok.type = lookup_ident(tok.literal)
-			append(&l.tokens, tok)
+			// append(&l.tokens, tok)
 			return tok
 		} else if is_digit(l.ch) {
 			tok.literal = read_number(l)
 			tok.type = INT
-			append(&l.tokens, tok)
+			// append(&l.tokens, tok)
 			return tok
 		} else {
-			tok = new_token(ILLEGAL, l.ch)
+			tok.literal = string_from_byte(l.ch)
+			tok.type = ILLEGAL
+			append(&l.illegals, tok.literal)
 		}
 	}
 
 	read_char(l)
 
-	append(&l.tokens, tok)
+	// append(&l.tokens, tok)
 	return tok
 }
 
