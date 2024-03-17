@@ -12,7 +12,7 @@ Any_Node :: union {
 	// Stmts
 	// ^Expr_Stmt,
 	^Let_Stmt,
-	// ^Return_Stmt,
+	^Return_Stmt,
 	// ^Block_Stmt,
 
 	// Exprs
@@ -60,6 +60,12 @@ Let_Stmt :: struct {
 	value:      ^Expr,
 }
 
+Return_Stmt :: struct {
+	using node:   Stmt,
+	token:        lexer.Token,
+	return_value: ^Expr,
+}
+
 // Exprs
 
 Ident :: struct {
@@ -75,7 +81,8 @@ token_literal :: proc(node: Node) -> string {
 	// case ^Expr_Stmt: return expr_stmt_string(v)
 	case ^Let_Stmt:
 		return let_stmt_token_literal(v)
-	// case ^Return_Stmt: return return_stmt_string(v)
+	case ^Return_Stmt:
+		return return_stmt_string(v)
 	// case ^Block_Stmt: return block_stmt_string(v)
 	case ^Ident:
 		return ident_token_literal(v)
@@ -131,10 +138,13 @@ let_stmt_token_literal :: proc(s: ^Let_Stmt) -> string {
 	return s.token.literal
 }
 
+return_stmt_string :: proc(s: ^Return_Stmt) -> string {
+	return s.token.literal
+}
+
 ident_token_literal :: proc(e: ^Ident) -> string {
 	return e.token.literal
 }
-
 new_node :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
 	node := new(T)
 	node.derived = node

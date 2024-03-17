@@ -69,17 +69,12 @@ delete_program :: proc(program: ^ast.Program) {
 		// 	return program_token_literal(v)
 		// case ^Expr_Stmt: return expr_stmt_string(v)
 		case ^ast.Let_Stmt:
-			// fmt.printf("get let; \n")
-			// fmt.printf("get let %v; \n", stmt.expr_base)
-			// fmt.printf("get let %v; \n", t.name)
+			// fmt.println("In Let_Stmt")
 			free(t.name)
 			free(t.value)
-		// delete(stmt.expr_base)
-		// delete(stmt.value)
-		// free(stmt.name)
-		// free(stmt.value)
-		// return let_stmt_token_literal(v)
-		// case ^Return_Stmt: return return_stmt_string(v)
+		case ^ast.Return_Stmt:
+			// fmt.printf("In Return_Stmt")
+			free(t.return_value)
 		// case ^Block_Stmt: return block_stmt_string(v)
 		// case ^Ident:
 		// 	return ident_token_literal(v)
@@ -107,6 +102,8 @@ parse_statement :: proc(p: ^Parser) -> ^ast.Stmt {
 	switch p.cur_token.type {
 	case lexer.LET:
 		return parse_let_stmt(p)
+	case lexer.RETURN:
+		return parse_return_stmt(p)
 	case:
 		return nil
 	}
@@ -135,6 +132,21 @@ parse_let_stmt :: proc(p: ^Parser) -> ^ast.Stmt {
 	}
 
 	return let
+}
+
+parse_return_stmt :: proc(p: ^Parser) -> ^ast.Stmt {
+	ret := ast.new_node(ast.Return_Stmt)
+	ret.token = p.cur_token
+
+	next_token(p)
+
+	// TODO: We're skipping the expressions until we
+	// encounter a semicolon
+	for !cur_token_is(p, lexer.SEMICOLON) {
+		next_token(p)
+	}
+
+	return ret
 }
 
 cur_token_is :: proc(p: ^Parser, t: lexer.TokenType) -> bool {

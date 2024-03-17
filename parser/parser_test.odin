@@ -90,6 +90,47 @@ test_let_stmt :: proc(t: ^testing.T, s: ^ast.Stmt, name: string) -> bool {
 	return true
 }
 
+test_return_stmts :: proc(t: ^testing.T) {
+	input := `
+    return 5;
+    return 10;
+    return 993322;
+    `
+
+	l := lexer.new_lexer(input)
+	defer lexer.delete_lexer(l)
+
+	p := new_parser(l)
+	defer delete_parser(p)
+
+	program := parse_program(p)
+	defer delete_program(program)
+
+	check_parser_errors(t, p)
+
+	if len(program.statements) != 3 {
+		fmt.panicf(
+			"program.Statements does not contain 3 statements. got=%d",
+			len(program.statements),
+		)
+	}
+
+	for s in program.statements {
+		return_stmt, ok := s.derived.(^ast.Return_Stmt)
+		if !ok {
+			testing.errorf(t, "s.derived not ^ast.Return_Stmt. got=%T", s)
+			continue
+		}
+		if ast.token_literal(return_stmt) != "return" {
+			testing.errorf(
+				t,
+				"ast.token_literal(return_stmt) not 'return'. got=%q",
+				ast.token_literal(return_stmt),
+			)
+		}
+	}
+}
+
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
@@ -121,4 +162,5 @@ test_parser_main :: proc(t: ^testing.T) {
 	}
 
 	run_test(t, "[RUN] test_let_stmts", test_let_stmts)
+	run_test(t, "[RUN] test_return_stmts", test_return_stmts)
 }
