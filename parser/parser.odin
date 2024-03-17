@@ -59,44 +59,6 @@ parse_program :: proc(p: ^Parser) -> ^ast.Program {
 	return program
 }
 
-delete_program :: proc(program: ^ast.Program) {
-
-	for stmt in program.statements {
-		// switch v in program.statements[0].node.derived {
-		#partial switch t in stmt.expr_base.derived {
-		// case ^ast.Program:
-		// 	fmt.printf("case Program\n")
-		// 	return program_token_literal(v)
-		// case ^Expr_Stmt: return expr_stmt_string(v)
-		case ^ast.Let_Stmt:
-			// fmt.println("In Let_Stmt")
-			free(t.name)
-			free(t.value)
-		case ^ast.Return_Stmt:
-			// fmt.printf("In Return_Stmt")
-			free(t.return_value)
-		// case ^Block_Stmt: return block_stmt_string(v)
-		// case ^Ident:
-		// 	return ident_token_literal(v)
-		// case ^Int_Literal: return int_literal_string(v)
-		// case ^String_Literal: return string_literal_string(v)
-		// case ^Bool_Literal: return bool_literal_string(v)
-		// case ^Prefix_Expr: return prefix_expr_string(v)
-		// case ^Infix_Expr: return infix_expr_string(v)
-		// case ^If_Expr: return if_expr_string(v)
-		// case ^Function_Literal: return function_expr_string(v)
-		// case ^Call_Expr: return call_expr_string(v)
-		// case ^Array_Literal: return array_expr_string(v)
-		// case ^Index_Expr: return index_expr_string(v)
-		// case ^Hash_Expr: return hash_expr_string(v)
-		case:
-			panic("unknown node type")
-		}
-		free(stmt)
-	}
-	delete(program.statements)
-	free(program)
-}
 
 parse_statement :: proc(p: ^Parser) -> ^ast.Stmt {
 	switch p.cur_token.type {
