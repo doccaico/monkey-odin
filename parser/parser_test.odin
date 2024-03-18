@@ -392,6 +392,10 @@ test_operator_precedence_parsing :: proc(t: ^testing.T) {
 		{"5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"},
 		{"5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"},
 		{"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
+		{"true", "true"},
+		{"false", "false"},
+		{"3 > 5 == false", "((3 > 5) == false)"},
+		{"3 < 5 == true", "((3 < 5) == true)"},
 	}
 
 	for tt in infix_tests {
@@ -413,6 +417,179 @@ test_operator_precedence_parsing :: proc(t: ^testing.T) {
 
 		if actual != tt.expected {
 			testing.errorf(t, "expected=%q, got=%q", tt.expected, actual)
+		}
+	}
+}
+
+test_bool_literal_expr :: proc(t: ^testing.T) {
+	tests := []struct {
+		input:    string,
+		expected: bool,
+	}{{"true;", true}, {"false;", false}}
+
+	for tt in tests {
+
+		l := lexer.new_lexer(tt.input)
+		defer lexer.delete_lexer(l)
+
+		p := new_parser(l)
+		defer delete_parser(p)
+
+		program := parse_program(p)
+		defer ast.delete_program(program)
+
+		check_parser_errors(t, p)
+
+		if len(program.statements) != 1 {
+			fmt.panicf("program has not enough statements. got=%d", len(program.statements))
+		}
+
+		stmt, ok_stmt := program.statements[0].derived.(^ast.Expr_Stmt)
+		if !ok_stmt {
+			fmt.panicf(
+				"program.statements[0].derived is not ^ast.Expr_Stmt. got=%T",
+				program.statements[0],
+			)
+		}
+
+		boolean, ok_boolean := stmt.expr.derived.(^ast.Bool_Literal)
+		if !ok_boolean {
+			fmt.panicf("exp is not ^ast.Bool_Literal. got=%T", stmt.expr)
+		}
+		if boolean.value != tt.expected {
+			testing.errorf(t, "boolean.value is not =%v, got=%v", tt.expected, boolean.value)
+		}
+	}
+}
+
+test_parsing_infix_expr_bool :: proc(t: ^testing.T) {
+	tests := []struct {
+		input:       string,
+		left_value:  bool,
+		operator:    string,
+		right_value: bool,
+	} {
+		{"true == true", true, "==", true},
+		{"true != false", true, "!=", false},
+		{"false == false", false, "==", false},
+	}
+
+	for tt in tests {
+
+		l := lexer.new_lexer(tt.input)
+		defer lexer.delete_lexer(l)
+
+		p := new_parser(l)
+		defer delete_parser(p)
+
+		program := parse_program(p)
+		defer ast.delete_program(program)
+
+		check_parser_errors(t, p)
+
+		if len(program.statements) != 1 {
+			fmt.panicf(
+				"program.statements does not contain %d statements. got=%d",
+				1,
+				len(program.statements),
+			)
+		}
+
+		stmt, ok_stmt := program.statements[0].derived.(^ast.Expr_Stmt)
+		if !ok_stmt {
+			fmt.panicf(
+				"program.statements[0].derived is not ^ast.Expr_Stmt. got=%T",
+				program.statements[0],
+			)
+		}
+
+		expr, ok_expr := stmt.expr.derived.(^ast.Infix_Expr)
+		if !ok_expr {
+			fmt.panicf("expr is not ^ast.Infix_Expr. got=%T", stmt.expr)
+		}
+
+		{
+			boolean, ok_boolean := expr.left.derived.(^ast.Bool_Literal)
+			if !ok_boolean {
+				fmt.panicf("boolean is not ^ast.Bool_Literal. got=%T", stmt.expr)
+			}
+			if boolean.value != tt.left_value {
+				testing.errorf(t, "boolean.value is not =%v, got=%v", tt.left_value, boolean.value)
+			}
+		}
+
+		if expr.operator != tt.operator {
+			fmt.panicf("expr.operator is not '%s'. got='%s'", tt.operator, expr.operator)
+		}
+
+		{
+			boolean, ok_boolean := expr.right.derived.(^ast.Bool_Literal)
+			if !ok_boolean {
+				fmt.panicf("boolean is not ^ast.Bool_Literal. got=%T", stmt.expr)
+			}
+			if boolean.value != tt.right_value {
+				testing.errorf(
+					t,
+					"boolean.value is not =%v, got=%v",
+					tt.right_value,
+					boolean.value,
+				)
+			}
+		}
+	}
+}
+
+test_parsing_prefix_expr_bool :: proc(t: ^testing.T) {
+	tests := []struct {
+		input:    string,
+		operator: string,
+		value:    bool,
+	}{{"!true;", "!", true}, {"!false;", "!", false}}
+
+	for tt in tests {
+
+		l := lexer.new_lexer(tt.input)
+		defer lexer.delete_lexer(l)
+
+		p := new_parser(l)
+		defer delete_parser(p)
+
+		program := parse_program(p)
+		defer ast.delete_program(program)
+
+		check_parser_errors(t, p)
+
+		if len(program.statements) != 1 {
+			fmt.panicf(
+				"program.statements does not contain %d statements. got=%d",
+				1,
+				len(program.statements),
+			)
+		}
+
+		stmt, ok_stmt := program.statements[0].derived.(^ast.Expr_Stmt)
+		if !ok_stmt {
+			fmt.panicf(
+				"program.statements[0].derived is not ^ast.Expr_Stmt. got=%T",
+				program.statements[0],
+			)
+		}
+
+		expr, ok_expr := stmt.expr.derived.(^ast.Prefix_Expr)
+		if !ok_expr {
+			fmt.panicf("stmt is not ^ast.Prefix_Expr. got=%T", stmt.expr)
+		}
+
+		if expr.operator != tt.operator {
+			fmt.panicf("expr.operator is not '%s'. got=%s", tt.operator, expr.operator)
+		}
+
+		boolean, ok_boolean := expr.right.derived.(^ast.Bool_Literal)
+		if !ok_boolean {
+			fmt.panicf("boolean is not ^ast.Bool_Literal. got=%T", stmt.expr)
+		}
+		if boolean.value != tt.value {
+			testing.errorf(t, "boolean.value is not =%v, got=%v", tt.value, boolean.value)
 		}
 	}
 }
@@ -453,5 +630,9 @@ test_parser_main :: proc(t: ^testing.T) {
 	// run_test(t, "[RUN] test_int_literal_expr", test_int_literal_expr)
 	// run_test(t, "[RUN] test_parsing_prefix_expr", test_parsing_prefix_expr)
 	// run_test(t, "[RUN] test_parsing_infix_expr", test_parsing_infix_expr)
-	run_test(t, "[RUN] test_operator_precedence_parsing", test_operator_precedence_parsing)
+	// run_test(t, "[RUN] test_operator_precedence_parsing", test_operator_precedence_parsing)
+	// run_test(t, "[RUN] test_bool_literal_expr", test_bool_literal_expr)
+	// run_test(t, "[RUN] test_parsing_infix_expr_bool", test_parsing_infix_expr_bool)
+	run_test(t, "[RUN] test_parsing_prefix_expr_bool", test_parsing_prefix_expr_bool)
+
 }

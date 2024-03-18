@@ -22,8 +22,8 @@ Any_Node :: union {
 	^Int_Literal,
 	^Prefix_Expr,
 	^Infix_Expr,
+	^Bool_Literal,
 	// ^String_Literal,
-	// ^Bool_Literal,
 	// ^If_Expr,
 	// ^Function_Literal,
 	// ^Call_Expr,
@@ -101,6 +101,12 @@ Infix_Expr :: struct {
 	left:       ^Expr,
 	operator:   string,
 	right:      ^Expr,
+}
+
+Bool_Literal :: struct {
+	using node: Expr,
+	token:      lexer.Token,
+	value:      bool,
 }
 
 new_node :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
@@ -187,9 +193,10 @@ token_literal :: proc(node: Node) -> string {
 		return prefix_expr_token_literal(v)
 	case ^Infix_Expr:
 		return infix_expr_token_literal(v)
+	case ^Bool_Literal:
+		return bool_literal_token_literal(v)
 	// case ^Block_Stmt: return block_stmt_string(v)
 	// case ^String_Literal: return string_literal_string(v)
-	// case ^Bool_Literal: return bool_literal_string(v)
 	// case ^If_Expr: return if_expr_string(v)
 	// case ^Function_Literal: return function_expr_string(v)
 	// case ^Call_Expr: return call_expr_string(v)
@@ -237,6 +244,10 @@ infix_expr_token_literal :: proc(e: ^Infix_Expr) -> string {
 	return e.token.literal
 }
 
+bool_literal_token_literal :: proc(e: ^Bool_Literal) -> string {
+	return e.token.literal
+}
+
 // to_string
 
 to_string :: proc(node: Node) -> bytes.Buffer {
@@ -257,12 +268,12 @@ to_string :: proc(node: Node) -> bytes.Buffer {
 		return prefix_expr_to_string(v)
 	case ^Infix_Expr:
 		return infix_expr_to_string(v)
+	case ^Bool_Literal:
+		return bool_literal_to_string(v)
 	// case ^Block_Stmt:
 	// 	return block_stmt_string(v)
 	// case ^String_Literal:
 	// 	return string_literal_string(v)
-	// case ^Bool_Literal:
-	// 	return bool_literal_string(v)
 	// case ^If_Expr:
 	// 	return if_expr_string(v)
 	// case ^Function_Literal:
@@ -391,6 +402,14 @@ infix_expr_to_string :: proc(e: ^Infix_Expr) -> bytes.Buffer {
 	bytes.buffer_write(&out, bytes.buffer_to_bytes(&right_buf))
 
 	bytes.buffer_write(&out, transmute([]u8)string(")"))
+
+	return out
+}
+
+bool_literal_to_string :: proc(e: ^Bool_Literal) -> bytes.Buffer {
+	out: bytes.Buffer
+
+	bytes.buffer_write_string(&out, e.token.literal)
 
 	return out
 }

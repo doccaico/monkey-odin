@@ -63,6 +63,8 @@ new_parser :: proc(l: ^lexer.Lexer) -> ^Parser {
 	register_prefix(p, lexer.INT, parse_int_literal)
 	register_prefix(p, lexer.BANG, parse_prefix_expr)
 	register_prefix(p, lexer.MINUS, parse_prefix_expr)
+	register_prefix(p, lexer.TRUE, parse_bool_literal)
+	register_prefix(p, lexer.FALSE, parse_bool_literal)
 
 	register_infix(p, lexer.PLUS, parse_infix_expr)
 	register_infix(p, lexer.MINUS, parse_infix_expr)
@@ -248,6 +250,14 @@ parse_infix_expr :: proc(p: ^Parser, left: ^ast.Expr) -> ^ast.Expr {
 	prec := cur_precedence(p)
 	next_token(p)
 	expr.right = parse_expr(p, prec)
+
+	return expr
+}
+
+parse_bool_literal :: proc(p: ^Parser) -> ^ast.Expr {
+	expr := ast.new_node(ast.Bool_Literal)
+	expr.token = p.cur_token
+	expr.value = cur_token_is(p, lexer.TRUE)
 
 	return expr
 }
