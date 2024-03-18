@@ -1,5 +1,6 @@
 package ast
 
+import "core:bytes"
 import "core:fmt"
 import "core:mem"
 import "core:testing"
@@ -40,8 +41,10 @@ test_to_string :: proc(t: ^testing.T) {
 
 	program.statements = [dynamic]^Stmt{let}
 
-	s := to_string(program)
-	defer delete(s)
+	buf := to_string(program)
+	defer bytes.buffer_destroy(&buf)
+	s := bytes.buffer_to_string(&buf)
+
 	if s != "let myVar = anotherVar;" {
 		testing.errorf(t, "to_string(program) wrong. got=%q", s)
 	}

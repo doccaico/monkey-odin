@@ -1,5 +1,6 @@
 package parser
 
+import "core:bytes"
 import "core:fmt"
 import "core:mem"
 import "core:testing"
@@ -391,7 +392,6 @@ test_operator_precedence_parsing :: proc(t: ^testing.T) {
 		{"5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"},
 		{"5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"},
 		{"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
-		// {"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
 	}
 
 	for tt in infix_tests {
@@ -407,9 +407,10 @@ test_operator_precedence_parsing :: proc(t: ^testing.T) {
 
 		check_parser_errors(t, p)
 
-		actual := ast.to_string(program)
-		// fmt.println(actual)
-		defer delete(actual)
+		buf := ast.to_string(program)
+		defer bytes.buffer_destroy(&buf)
+		actual := bytes.buffer_to_string(&buf)
+
 		if actual != tt.expected {
 			testing.errorf(t, "expected=%q, got=%q", tt.expected, actual)
 		}

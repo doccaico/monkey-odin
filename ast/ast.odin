@@ -239,7 +239,7 @@ infix_expr_token_literal :: proc(e: ^Infix_Expr) -> string {
 
 // to_string
 
-to_string :: proc(node: Node) -> string {
+to_string :: proc(node: Node) -> bytes.Buffer {
 	switch v in node.derived {
 	case ^Program:
 		return program_to_string(v)
@@ -280,101 +280,117 @@ to_string :: proc(node: Node) -> string {
 	}
 }
 
-program_to_string :: proc(p: ^Program) -> string {
-	// fmt.println("In [Fn] program_to_string")
+program_to_string :: proc(p: ^Program) -> bytes.Buffer {
 	out: bytes.Buffer
-	// defer bytes.buffer_destroy(&out)
 
 	for stmt in p.statements {
-		// fmt.println(s)
-		// s := to_string(stmt)
-		// defer delete(s)
-		// bytes.buffer_write(&out, transmute([]u8)s)
-		bytes.buffer_write(&out, transmute([]u8)to_string(stmt))
+		buf := to_string(stmt)
+		defer bytes.buffer_destroy(&buf)
+		bytes.buffer_write(&out, bytes.buffer_to_bytes(&buf))
 	}
 
-	return bytes.buffer_to_string(&out)
+	return out
 }
 
-let_stmt_to_string :: proc(s: ^Let_Stmt) -> string {
+let_stmt_to_string :: proc(s: ^Let_Stmt) -> bytes.Buffer {
 	out: bytes.Buffer
-	// defer bytes.buffer_destroy(&out)
 
 	bytes.buffer_write(&out, transmute([]u8)token_literal(s))
 	bytes.buffer_write(&out, transmute([]u8)string(" "))
-	bytes.buffer_write(&out, transmute([]u8)to_string(s.name))
+
+	name_buf := to_string(s.name)
+	defer bytes.buffer_destroy(&name_buf)
+	bytes.buffer_write(&out, bytes.buffer_to_bytes(&name_buf))
+
 	bytes.buffer_write(&out, transmute([]u8)string(" = "))
 
 	if s.value != nil {
-		bytes.buffer_write(&out, transmute([]u8)to_string(s.value))
+		value_buf := to_string(s.value)
+		defer bytes.buffer_destroy(&value_buf)
+		bytes.buffer_write(&out, bytes.buffer_to_bytes(&value_buf))
 	}
 
 	bytes.buffer_write(&out, transmute([]u8)string(";"))
 
-	return bytes.buffer_to_string(&out)
+	return out
 }
 
-return_stmt_to_string :: proc(s: ^Return_Stmt) -> string {
+return_stmt_to_string :: proc(s: ^Return_Stmt) -> bytes.Buffer {
 	out: bytes.Buffer
-	// defer bytes.buffer_destroy(&out)
 
 	bytes.buffer_write(&out, transmute([]u8)token_literal(s))
 	bytes.buffer_write(&out, transmute([]u8)string(" "))
 
 	if s.return_value != nil {
-		bytes.buffer_write(&out, transmute([]u8)to_string(s.return_value))
+		buf := to_string(s.return_value)
+		defer bytes.buffer_destroy(&buf)
+		bytes.buffer_write(&out, bytes.buffer_to_bytes(&buf))
 	}
 
 	bytes.buffer_write(&out, transmute([]u8)string(";"))
 
-	return bytes.buffer_to_string(&out)
+	return out
 }
 
-expr_stmt_to_string :: proc(s: ^Expr_Stmt) -> string {
+expr_stmt_to_string :: proc(s: ^Expr_Stmt) -> bytes.Buffer {
+	out: bytes.Buffer
+
 	if s.expr != nil {
 		return to_string(s.expr)
 	}
-	return ""
+
+	return out
 }
 
-ident_to_string :: proc(e: ^Ident) -> string {
-	// out: bytes.Buffer
-	//
-	// bytes.buffer_write(&out, transmute([]u8)e.value)
-	//
-	// return bytes.buffer_to_string(&out)
-	return e.value
-}
-
-int_literal_to_string :: proc(e: ^Int_Literal) -> string {
-	return e.token.literal
-}
-
-prefix_expr_to_string :: proc(e: ^Prefix_Expr) -> string {
-	// fmt.println("In [Fn] prefix_expr_to_string")
+ident_to_string :: proc(e: ^Ident) -> bytes.Buffer {
 	out: bytes.Buffer
-	// defer bytes.buffer_destroy(&out)
+
+	bytes.buffer_write_string(&out, e.value)
+
+	return out
+}
+
+int_literal_to_string :: proc(e: ^Int_Literal) -> bytes.Buffer {
+	out: bytes.Buffer
+
+	bytes.buffer_write_string(&out, e.token.literal)
+
+	return out
+}
+
+prefix_expr_to_string :: proc(e: ^Prefix_Expr) -> bytes.Buffer {
+	out: bytes.Buffer
 
 	bytes.buffer_write(&out, transmute([]u8)string("("))
 	bytes.buffer_write(&out, transmute([]u8)e.operator)
-	bytes.buffer_write(&out, transmute([]u8)to_string(e.right))
+
+	buf := to_string(e.right)
+	defer bytes.buffer_destroy(&buf)
+	bytes.buffer_write(&out, bytes.buffer_to_bytes(&buf))
+
 	bytes.buffer_write(&out, transmute([]u8)string(")"))
 
-	return bytes.buffer_to_string(&out)
+	return out
 }
 
-infix_expr_to_string :: proc(e: ^Infix_Expr) -> string {
-	// fmt.println("In [Fn] infix_expr_to_string")
+infix_expr_to_string :: proc(e: ^Infix_Expr) -> bytes.Buffer {
 	out: bytes.Buffer
-	// defer bytes.buffer_destroy(&out)
 
 	bytes.buffer_write(&out, transmute([]u8)string("("))
-	bytes.buffer_write(&out, transmute([]u8)to_string(e.left))
+
+	left_buf := to_string(e.left)
+	defer bytes.buffer_destroy(&left_buf)
+	bytes.buffer_write(&out, bytes.buffer_to_bytes(&left_buf))
+
 	bytes.buffer_write(&out, transmute([]u8)string(" "))
 	bytes.buffer_write(&out, transmute([]u8)e.operator)
 	bytes.buffer_write(&out, transmute([]u8)string(" "))
-	bytes.buffer_write(&out, transmute([]u8)to_string(e.right))
+
+	right_buf := to_string(e.right)
+	defer bytes.buffer_destroy(&right_buf)
+	bytes.buffer_write(&out, bytes.buffer_to_bytes(&right_buf))
+
 	bytes.buffer_write(&out, transmute([]u8)string(")"))
 
-	return bytes.buffer_to_string(&out)
+	return out
 }
