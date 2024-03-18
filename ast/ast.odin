@@ -12,10 +12,10 @@ Any_Node :: union {
 	^Program,
 
 	// Stmts
-	^Expr_Stmt,
 	^Let_Stmt,
 	^Return_Stmt,
-	// ^Block_Stmt,
+	^Expr_Stmt,
+	^Block_Stmt,
 
 	// Exprs
 	^Ident,
@@ -23,8 +23,8 @@ Any_Node :: union {
 	^Prefix_Expr,
 	^Infix_Expr,
 	^Bool_Literal,
+	^If_Expr,
 	// ^String_Literal,
-	// ^If_Expr,
 	// ^Function_Literal,
 	// ^Call_Expr,
 	// ^Array_Literal,
@@ -74,6 +74,12 @@ Expr_Stmt :: struct {
 	expr:       ^Expr,
 }
 
+Block_Stmt :: struct {
+	using node: Stmt,
+	token:      lexer.Token,
+	statements: [dynamic]^Stmt,
+}
+
 // Exprs
 
 Ident :: struct {
@@ -109,9 +115,20 @@ Bool_Literal :: struct {
 	value:      bool,
 }
 
+If_Expr :: struct {
+	using node:  Expr,
+	token:       lexer.Token,
+	condition:   ^Expr,
+	consequence: ^Block_Stmt,
+	alternative: ^Block_Stmt,
+}
+
 new_node :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
 	node := new(T)
 	node.derived = node
+	// fmt.println(node.derived)
+	// fmt.printf("%p\n", node)
+	// fmt.println()
 
 	return node
 }
@@ -123,7 +140,6 @@ delete_program :: proc(program: ^Program) {
 		// case ^ast.Program:
 		// fmt.println("In Program")
 		case ^Expr_Stmt:
-			// fmt.println("In Expr_Stmt")
 			free_expr_stmt(t.expr)
 			free(t.expr)
 		case ^Let_Stmt:
@@ -133,18 +149,24 @@ delete_program :: proc(program: ^Program) {
 		case ^Return_Stmt:
 			// fmt.printf("In Return_Stmt")
 			free(t.return_value)
+		// case ^Ident:
+		// 	fmt.printf("In Ident %s\n", t.value)
 		// case ^Prefix_Expr:
 		// 	fmt.println("In Prefix_Expr")
 		// 	free(t.right)
 		// case ^Int_Literal: return int_literal_string(v)
-		// case ^Block_Stmt: return block_stmt_string(v)
-		// case ^Ident:
-		// 	fmt.printf("In Ident")
+		// case ^Block_Stmt:
+		// 	fmt.printf("In Block_Stmt")
+		// return block_stmt_string(v)
 		// return ident_token_literal(v)
 		// case ^String_Literal: return string_literal_string(v)
-		// case ^Bool_Literal: return bool_literal_string(v)
-		// case ^Infix_Expr: return infix_expr_string(v)
-		// case ^If_Expr: return if_expr_string(v)
+		// return bool_literal_string(v)
+		// case ^Bool_Literal:
+		// 	fmt.printf("bool literal\n")
+		// case ^Infix_Expr:
+		// 	fmt.println("Infix_Expr")
+		// case ^If_Expr:
+		// 	fmt.println("If_Expr")
 		// case ^Function_Literal: return function_expr_string(v)
 		// case ^Call_Expr: return call_expr_string(v)
 		// case ^Array_Literal: return array_expr_string(v)
@@ -160,6 +182,7 @@ delete_program :: proc(program: ^Program) {
 }
 
 free_expr_stmt :: proc(expr: ^Expr) {
+	// fmt.println(expr)
 	// fmt.println("In [Fn] free_expr_stmt")
 	#partial switch t in expr.expr_base.derived {
 	case ^Prefix_Expr:
@@ -170,6 +193,37 @@ free_expr_stmt :: proc(expr: ^Expr) {
 		free(t.left)
 		free_expr_stmt(t.right)
 		free(t.right)
+	case ^If_Expr:
+		free_expr_stmt(t.condition)
+		free(t.condition)
+
+		for stmt in t.consequence.statements {
+			free(stmt.derived.(^Expr_Stmt).expr)
+			free(stmt)
+		}
+		delete(t.consequence.statements)
+		free(t.consequence)
+
+		if t.alternative != nil {
+			for stmt in t.alternative.statements {
+				free(stmt)
+			}
+			delete(t.alternative.statements)
+			free(t.alternative)
+		}
+	// case ^Expr_Stmt:
+	// 	fmt.printf("Expr_Stmt\n")
+	// case ^Bool_Literal:
+	// 	fmt.printf("bool literal\n")
+	// case ^Ident:
+	// 	fmt.printf("In Ident %s\n", t.value)
+	// 	a := expr.expr_base.derived.(^Ident)
+	// 	free(a)
+	// free(t.value)
+	// case ^Block_Stmt:
+	// 	fmt.println("In Block_Stmt")
+	// case:
+	// 	fmt.println(t)
 	}
 }
 
@@ -195,9 +249,11 @@ token_literal :: proc(node: Node) -> string {
 		return infix_expr_token_literal(v)
 	case ^Bool_Literal:
 		return bool_literal_token_literal(v)
-	// case ^Block_Stmt: return block_stmt_string(v)
+	case ^If_Expr:
+		return if_expr_token_literal(v)
+	case ^Block_Stmt:
+		return block_stmt_token_literal(v)
 	// case ^String_Literal: return string_literal_string(v)
-	// case ^If_Expr: return if_expr_string(v)
 	// case ^Function_Literal: return function_expr_string(v)
 	// case ^Call_Expr: return call_expr_string(v)
 	// case ^Array_Literal: return array_expr_string(v)
@@ -248,6 +304,14 @@ bool_literal_token_literal :: proc(e: ^Bool_Literal) -> string {
 	return e.token.literal
 }
 
+if_expr_token_literal :: proc(e: ^If_Expr) -> string {
+	return e.token.literal
+}
+
+block_stmt_token_literal :: proc(e: ^Block_Stmt) -> string {
+	return e.token.literal
+}
+
 // to_string
 
 to_string :: proc(node: Node) -> bytes.Buffer {
@@ -270,12 +334,12 @@ to_string :: proc(node: Node) -> bytes.Buffer {
 		return infix_expr_to_string(v)
 	case ^Bool_Literal:
 		return bool_literal_to_string(v)
-	// case ^Block_Stmt:
-	// 	return block_stmt_string(v)
+	case ^If_Expr:
+		return if_expr_to_string(v)
+	case ^Block_Stmt:
+		return block_stmt_to_string(v)
 	// case ^String_Literal:
 	// 	return string_literal_string(v)
-	// case ^If_Expr:
-	// 	return if_expr_string(v)
 	// case ^Function_Literal:
 	// 	return function_expr_string(v)
 	// case ^Call_Expr:
@@ -410,6 +474,44 @@ bool_literal_to_string :: proc(e: ^Bool_Literal) -> bytes.Buffer {
 	out: bytes.Buffer
 
 	bytes.buffer_write_string(&out, e.token.literal)
+
+	return out
+}
+
+if_expr_to_string :: proc(e: ^If_Expr) -> bytes.Buffer {
+	out: bytes.Buffer
+
+	bytes.buffer_write_string(&out, "if")
+
+	condition_buf := to_string(e.condition)
+	defer bytes.buffer_destroy(&condition_buf)
+	bytes.buffer_write(&out, bytes.buffer_to_bytes(&condition_buf))
+
+	bytes.buffer_write_string(&out, " ")
+
+	consequence_buf := to_string(e.consequence)
+	defer bytes.buffer_destroy(&consequence_buf)
+	bytes.buffer_write(&out, bytes.buffer_to_bytes(&consequence_buf))
+
+	if e.alternative != nil {
+		bytes.buffer_write_string(&out, "else ")
+
+		alternative_buf := to_string(e.alternative)
+		defer bytes.buffer_destroy(&alternative_buf)
+		bytes.buffer_write(&out, bytes.buffer_to_bytes(&alternative_buf))
+	}
+
+	return out
+}
+
+block_stmt_to_string :: proc(s: ^Block_Stmt) -> bytes.Buffer {
+	out: bytes.Buffer
+
+	for stmt in s.statements {
+		buf := to_string(stmt)
+		defer bytes.buffer_destroy(&buf)
+		bytes.buffer_write(&out, bytes.buffer_to_bytes(&buf))
+	}
 
 	return out
 }

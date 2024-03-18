@@ -66,6 +66,7 @@ new_parser :: proc(l: ^lexer.Lexer) -> ^Parser {
 	register_prefix(p, lexer.TRUE, parse_bool_literal)
 	register_prefix(p, lexer.FALSE, parse_bool_literal)
 	register_prefix(p, lexer.LPAREN, parse_grouped_expr)
+	register_prefix(p, lexer.IF, parse_if_expr)
 
 	register_infix(p, lexer.PLUS, parse_infix_expr)
 	register_infix(p, lexer.MINUS, parse_infix_expr)
@@ -186,6 +187,7 @@ no_prefix_parse_fn_error :: proc(p: ^Parser, t: lexer.TokenType) {
 
 parse_expr :: proc(p: ^Parser, prec: precedence) -> ^ast.Expr {
 	prefix := p.prefix_parse_fns[p.cur_token.type]
+
 	if prefix == nil {
 		no_prefix_parse_fn_error(p, p.cur_token.type)
 		return nil
@@ -273,6 +275,57 @@ parse_grouped_expr :: proc(p: ^Parser) -> ^ast.Expr {
 	}
 
 	return expr
+}
+
+parse_if_expr :: proc(p: ^Parser) -> ^ast.Expr {
+	expr := ast.new_node(ast.If_Expr)
+	expr.token = p.cur_token
+
+	if !expect_peek(p, lexer.LPAREN) {
+		return nil
+	}
+
+	next_token(p)
+	expr.condition = parse_expr(p, .LOWEST)
+
+	if !expect_peek(p, lexer.RPAREN) {
+		return nil
+	}
+
+	if !expect_peek(p, lexer.LBRACE) {
+		return nil
+	}
+
+	expr.consequence = parse_block_stmt(p)
+
+	if peek_token_is(p, lexer.ELSE) {
+		next_token(p)
+
+		if !expect_peek(p, lexer.LBRACE) {
+			return nil
+		}
+
+		expr.alternative = parse_block_stmt(p)
+	}
+
+	return expr
+}
+
+parse_block_stmt :: proc(p: ^Parser) -> ^ast.Block_Stmt {
+	block := ast.new_node(ast.Block_Stmt)
+	block.token = p.cur_token
+
+	next_token(p)
+
+	for !cur_token_is(p, lexer.RBRACE) {
+		stmt := parse_statement(p)
+		if stmt != nil {
+			append(&block.statements, stmt)
+		}
+		next_token(p)
+	}
+
+	return block
 }
 
 cur_token_is :: proc(p: ^Parser, t: lexer.TokenType) -> bool {

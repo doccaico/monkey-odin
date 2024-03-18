@@ -599,6 +599,100 @@ test_parsing_prefix_expr_bool :: proc(t: ^testing.T) {
 	}
 }
 
+test_if_expr :: proc(t: ^testing.T) {
+	input := `if (x < y) { z }`
+
+	l := lexer.new_lexer(input)
+	defer lexer.delete_lexer(l)
+
+	p := new_parser(l)
+	defer delete_parser(p)
+
+	program := parse_program(p)
+	defer ast.delete_program(program)
+
+	check_parser_errors(t, p)
+
+	if len(program.statements) != 1 {
+		fmt.panicf(
+			"program.Body does not contain %d statements. got=%d",
+			1,
+			len(program.statements),
+		)
+	}
+
+	stmt, ok_stmt := program.statements[0].derived.(^ast.Expr_Stmt)
+	if !ok_stmt {
+		fmt.panicf(
+			"program.statements[0].derived is not ^ast.Expr_Stmt. got=%T",
+			program.statements[0],
+		)
+	}
+
+	expr, ok_expr := stmt.expr.derived.(^ast.If_Expr)
+	if !ok_expr {
+		fmt.panicf("stmt is not ^ast.If_Expr. got=%T", stmt.expr)
+	}
+
+	// start: "x < y"
+	{
+		expr, ok_expr := expr.condition.derived.(^ast.Infix_Expr)
+		if !ok_expr {
+			fmt.panicf("expr is not ^ast.Infix_Expr. got=%T", stmt.expr)
+		}
+
+		{
+			e, ok := expr.left.derived.(^ast.Ident)
+			if !ok {
+				fmt.panicf("expr.left is not ^ast.Ident. got=%T", expr.left)
+			}
+			if e.value != "x" {
+				testing.errorf(t, "e.value is not =%v, got=%v", "x", e.value)
+			}
+		}
+
+		if expr.operator != "<" {
+			testing.errorf(t, "expr.operator is not '%s'. got='%s'", "<", expr.operator)
+		}
+
+		{
+			e, ok := expr.right.derived.(^ast.Ident)
+			if !ok {
+				fmt.panicf("expr.right is not ^ast.Ident. got=%T", expr.right)
+			}
+			if e.value != "y" {
+				testing.errorf(t, "e.value is not =%v, got=%v", "y", e.value)
+			}
+		}
+	} // end: "x < y"
+
+	if len(expr.consequence.statements) != 1 {
+		testing.errorf(
+			t,
+			"consequence is not 1 statements. got=%d\n",
+			len(expr.consequence.statements),
+		)
+	}
+
+	consequence, ok_consequence := expr.consequence.statements[0].derived.(^ast.Expr_Stmt)
+	if !ok_consequence {
+		fmt.panicf("expr.consequence.statements[0] is not ^ast.Expr_Stmt. got=%T", consequence)
+	}
+
+	// start: "z"
+	ident, ok_ident := consequence.expr.derived.(^ast.Ident)
+	if !ok_ident {
+		fmt.panicf("consequence.expr is not ^ast.Ident. got=%T", ident)
+	}
+	if ident.value != "z" {
+		testing.errorf(t, "ident.value is not =%v, got=%v", "z", ident.value)
+	} // end: "z"
+
+	if expr.alternative != nil {
+		testing.errorf(t, "expr.alternative.statements was not nil.")
+	}
+}
+
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
@@ -617,6 +711,7 @@ test_parser_main :: proc(t: ^testing.T) {
 				fmt.eprintf("=== %v allocations not freed: ===\n", len(track.allocation_map))
 				for _, entry in track.allocation_map {
 					fmt.eprintf("- %v bytes @ %v\n", entry.size, entry.location)
+					// fmt.eprintf("%p\n", entry.memory)
 				}
 			}
 			if len(track.bad_free_array) > 0 {
@@ -635,9 +730,9 @@ test_parser_main :: proc(t: ^testing.T) {
 	// run_test(t, "[RUN] test_int_literal_expr", test_int_literal_expr)
 	// run_test(t, "[RUN] test_parsing_prefix_expr", test_parsing_prefix_expr)
 	// run_test(t, "[RUN] test_parsing_infix_expr", test_parsing_infix_expr)
-	run_test(t, "[RUN] test_operator_precedence_parsing", test_operator_precedence_parsing)
+	// run_test(t, "[RUN] test_operator_precedence_parsing", test_operator_precedence_parsing)
 	// run_test(t, "[RUN] test_bool_literal_expr", test_bool_literal_expr)
 	// run_test(t, "[RUN] test_parsing_infix_expr_bool", test_parsing_infix_expr_bool)
 	// run_test(t, "[RUN] test_parsing_prefix_expr_bool", test_parsing_prefix_expr_bool)
-
+	run_test(t, "[RUN] test_if_expr", test_if_expr)
 }
