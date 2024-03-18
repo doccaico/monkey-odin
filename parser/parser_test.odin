@@ -396,6 +396,11 @@ test_operator_precedence_parsing :: proc(t: ^testing.T) {
 		{"false", "false"},
 		{"3 > 5 == false", "((3 > 5) == false)"},
 		{"3 < 5 == true", "((3 < 5) == true)"},
+		{"1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"},
+		{"(5 + 5) * 2", "((5 + 5) * 2)"},
+		{"2 / (5 + 5)", "(2 / (5 + 5))"},
+		{"-(5 + 5)", "(-(5 + 5))"},
+		{"!(true == true)", "(!(true == true))"},
 	}
 
 	for tt in infix_tests {
@@ -630,9 +635,9 @@ test_parser_main :: proc(t: ^testing.T) {
 	// run_test(t, "[RUN] test_int_literal_expr", test_int_literal_expr)
 	// run_test(t, "[RUN] test_parsing_prefix_expr", test_parsing_prefix_expr)
 	// run_test(t, "[RUN] test_parsing_infix_expr", test_parsing_infix_expr)
-	// run_test(t, "[RUN] test_operator_precedence_parsing", test_operator_precedence_parsing)
+	run_test(t, "[RUN] test_operator_precedence_parsing", test_operator_precedence_parsing)
 	// run_test(t, "[RUN] test_bool_literal_expr", test_bool_literal_expr)
 	// run_test(t, "[RUN] test_parsing_infix_expr_bool", test_parsing_infix_expr_bool)
-	run_test(t, "[RUN] test_parsing_prefix_expr_bool", test_parsing_prefix_expr_bool)
+	// run_test(t, "[RUN] test_parsing_prefix_expr_bool", test_parsing_prefix_expr_bool)
 
 }
