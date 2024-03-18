@@ -102,17 +102,14 @@ new_node :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived")
 }
 
 delete_program :: proc(program: ^Program) {
-
-	// fmt.println("In delete_program")
+	// fmt.println("In [Fn] delete_program")
 	for stmt in program.statements {
 		#partial switch t in stmt.expr_base.derived {
 		// case ^ast.Program:
 		// fmt.println("In Program")
 		case ^Expr_Stmt:
 			// fmt.println("In Expr_Stmt")
-			if pe, pe_ok := t.expr.derived.(^Prefix_Expr); pe_ok {
-				free(pe.right)
-			}
+			free_expr_stmt(t.expr)
 			free(t.expr)
 		case ^Let_Stmt:
 			// fmt.println("In Let_Stmt")
@@ -121,9 +118,9 @@ delete_program :: proc(program: ^Program) {
 		case ^Return_Stmt:
 			// fmt.printf("In Return_Stmt")
 			free(t.return_value)
-		case ^Prefix_Expr:
-			fmt.println("In Prefix_Expr")
-			free(t.right)
+		// case ^Prefix_Expr:
+		// 	fmt.println("In Prefix_Expr")
+		// 	free(t.right)
 		// case ^Int_Literal: return int_literal_string(v)
 		// case ^Block_Stmt: return block_stmt_string(v)
 		// case ^Ident:
@@ -147,6 +144,14 @@ delete_program :: proc(program: ^Program) {
 	free(program)
 }
 
+free_expr_stmt :: proc(expr: ^Expr) {
+	// fmt.println("In [Fn] free_expr_stmt")
+	#partial switch t in expr.expr_base.derived {
+	case ^Prefix_Expr:
+		free_expr_stmt(t.right)
+		free(t.right)
+	}
+}
 
 // token_literal
 
