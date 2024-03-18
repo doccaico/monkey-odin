@@ -229,6 +229,85 @@ test_int_literal_expr :: proc(t: ^testing.T) {
 	}
 }
 
+test_parsing_prefix_expr :: proc(t: ^testing.T) {
+	prefix_tests := []struct {
+		input:     string,
+		operator:  string,
+		int_value: i64,
+	}{{"!5;", "!", 5}, {"-15;", "-", 15}}
+
+	for tt in prefix_tests {
+
+		l := lexer.new_lexer(tt.input)
+		defer lexer.delete_lexer(l)
+
+		p := new_parser(l)
+		defer delete_parser(p)
+
+		program := parse_program(p)
+		defer ast.delete_program(program)
+
+		check_parser_errors(t, p)
+
+		if len(program.statements) != 1 {
+			fmt.panicf(
+				"program.statements does not contain %d statements. got=%d",
+				1,
+				len(program.statements),
+			)
+		}
+
+		stmt, ok_stmt := program.statements[0].derived.(^ast.Expr_Stmt)
+		if !ok_stmt {
+			fmt.panicf(
+				"program.statements[0].derived is not ^ast.Expr_Stmt. got=%T",
+				program.statements[0],
+			)
+		}
+
+		if stmt.expr == nil {
+			panic("stmt.expr == nil; use 'useregister_prefix'")
+		}
+
+		expr, ok_expr := stmt.expr.derived.(^ast.Prefix_Expr)
+		if !ok_expr {
+			fmt.panicf("stmt is not ^ast.Prefix_Expr. got=%T", stmt.expr)
+		}
+		if expr.operator != tt.operator {
+			fmt.panicf("expr.operator is not '%s'. got=%s", tt.operator, expr.operator)
+		}
+		if !test_int_literal(t, expr.right, tt.int_value) {
+			return
+		}
+	}
+}
+
+test_int_literal :: proc(t: ^testing.T, il: ^ast.Expr, value: i64) -> bool {
+	integ, ok := il.derived.(^ast.Int_Literal)
+	if !ok {
+		testing.errorf(t, "il not ^ast.Int_Literal. got=%T", il)
+		return false
+	}
+
+	if integ.value != value {
+		testing.errorf(t, "integ.value not %d. got=%d", value, integ.value)
+		return false
+	}
+
+	int_str := fmt.tprintf("%d", value)
+	if ast.token_literal(integ) != int_str {
+		testing.errorf(
+			t,
+			"ast.token_literal(integ) not %d. got=%s",
+			value,
+			ast.token_literal(integ),
+		)
+		return false
+	}
+
+	return true
+}
+
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
@@ -259,8 +338,9 @@ test_parser_main :: proc(t: ^testing.T) {
 		}
 	}
 
-	run_test(t, "[RUN] test_let_stmts", test_let_stmts)
-	run_test(t, "[RUN] test_return_stmts", test_return_stmts)
-	run_test(t, "[RUN] test_ident_expr", test_ident_expr)
-	run_test(t, "[RUN] test_int_literal_expr", test_int_literal_expr)
+	// run_test(t, "[RUN] test_let_stmts", test_let_stmts)
+	// run_test(t, "[RUN] test_return_stmts", test_return_stmts)
+	// run_test(t, "[RUN] test_ident_expr", test_ident_expr)
+	// run_test(t, "[RUN] test_int_literal_expr", test_int_literal_expr)
+	run_test(t, "[RUN] test_parsing_prefix_expr", test_parsing_prefix_expr)
 }

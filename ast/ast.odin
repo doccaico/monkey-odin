@@ -19,9 +19,9 @@ Any_Node :: union {
 	// Exprs
 	^Ident,
 	^Int_Literal,
+	^Prefix_Expr,
 	// ^String_Literal,
 	// ^Bool_Literal,
-	// ^Prefix_Expr,
 	// ^Infix_Expr,
 	// ^If_Expr,
 	// ^Function_Literal,
@@ -87,6 +87,13 @@ Int_Literal :: struct {
 	value:      i64,
 }
 
+Prefix_Expr :: struct {
+	using node: Expr,
+	token:      lexer.Token,
+	operator:   string,
+	right:      ^Expr,
+}
+
 new_node :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
 	node := new(T)
 	node.derived = node
@@ -96,14 +103,16 @@ new_node :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived")
 
 delete_program :: proc(program: ^Program) {
 
+	// fmt.println("In delete_program")
 	for stmt in program.statements {
-		// switch v in program.statements[0].node.derived {
 		#partial switch t in stmt.expr_base.derived {
 		// case ^ast.Program:
-		// 	fmt.printf("case Program\n")
-		// 	return program_token_literal(v)
+		// fmt.println("In Program")
 		case ^Expr_Stmt:
 			// fmt.println("In Expr_Stmt")
+			if pe, pe_ok := t.expr.derived.(^Prefix_Expr); pe_ok {
+				free(pe.right)
+			}
 			free(t.expr)
 		case ^Let_Stmt:
 			// fmt.println("In Let_Stmt")
@@ -112,14 +121,16 @@ delete_program :: proc(program: ^Program) {
 		case ^Return_Stmt:
 			// fmt.printf("In Return_Stmt")
 			free(t.return_value)
+		case ^Prefix_Expr:
+			fmt.println("In Prefix_Expr")
+			free(t.right)
+		// case ^Int_Literal: return int_literal_string(v)
 		// case ^Block_Stmt: return block_stmt_string(v)
 		// case ^Ident:
 		// 	fmt.printf("In Ident")
 		// return ident_token_literal(v)
-		// case ^Int_Literal: return int_literal_string(v)
 		// case ^String_Literal: return string_literal_string(v)
 		// case ^Bool_Literal: return bool_literal_string(v)
-		// case ^Prefix_Expr: return prefix_expr_string(v)
 		// case ^Infix_Expr: return infix_expr_string(v)
 		// case ^If_Expr: return if_expr_string(v)
 		// case ^Function_Literal: return function_expr_string(v)
@@ -149,14 +160,15 @@ token_literal :: proc(node: Node) -> string {
 		return return_stmt_token_literal(v)
 	case ^Expr_Stmt:
 		return expr_stmt_token_literal(v)
-	// case ^Block_Stmt: return block_stmt_string(v)
 	case ^Ident:
 		return ident_token_literal(v)
 	case ^Int_Literal:
 		return int_literal_token_literal(v)
+	case ^Prefix_Expr:
+		return prefix_expr_token_literal(v)
+	// case ^Block_Stmt: return block_stmt_string(v)
 	// case ^String_Literal: return string_literal_string(v)
 	// case ^Bool_Literal: return bool_literal_string(v)
-	// case ^Prefix_Expr: return prefix_expr_string(v)
 	// case ^Infix_Expr: return infix_expr_string(v)
 	// case ^If_Expr: return if_expr_string(v)
 	// case ^Function_Literal: return function_expr_string(v)
@@ -197,6 +209,10 @@ int_literal_token_literal :: proc(e: ^Int_Literal) -> string {
 	return e.token.literal
 }
 
+prefix_expr_token_literal :: proc(e: ^Prefix_Expr) -> string {
+	return e.token.literal
+}
+
 // to_string
 
 to_string :: proc(node: Node) -> string {
@@ -209,18 +225,18 @@ to_string :: proc(node: Node) -> string {
 		return return_stmt_to_string(v)
 	case ^Expr_Stmt:
 		return expr_stmt_to_string(v)
-	// case ^Block_Stmt:
-	// 	return block_stmt_string(v)
 	case ^Ident:
 		return ident_to_string(v)
 	case ^Int_Literal:
 		return int_literal_to_string(v)
+	case ^Prefix_Expr:
+		return prefix_expr_to_string(v)
+	// case ^Block_Stmt:
+	// 	return block_stmt_string(v)
 	// case ^String_Literal:
 	// 	return string_literal_string(v)
 	// case ^Bool_Literal:
 	// 	return bool_literal_string(v)
-	// case ^Prefix_Expr:
-	// 	return prefix_expr_string(v)
 	// case ^Infix_Expr:
 	// 	return infix_expr_string(v)
 	// case ^If_Expr:
@@ -302,4 +318,15 @@ ident_to_string :: proc(e: ^Ident) -> string {
 
 int_literal_to_string :: proc(e: ^Int_Literal) -> string {
 	return e.token.literal
+}
+
+prefix_expr_to_string :: proc(e: ^Prefix_Expr) -> string {
+	out: bytes.Buffer
+
+	bytes.buffer_write(&out, transmute([]u8)string("("))
+	bytes.buffer_write(&out, transmute([]u8)e.operator)
+	bytes.buffer_write(&out, transmute([]u8)to_string(e.right))
+	bytes.buffer_write(&out, transmute([]u8)string(")"))
+
+	return bytes.buffer_to_string(&out)
 }

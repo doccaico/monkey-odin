@@ -52,6 +52,8 @@ new_parser :: proc(l: ^lexer.Lexer) -> ^Parser {
 
 	register_prefix(p, lexer.IDENT, parse_ident)
 	register_prefix(p, lexer.INT, parse_int_literal)
+	register_prefix(p, lexer.BANG, parse_prefix_expr)
+	register_prefix(p, lexer.MINUS, parse_prefix_expr)
 
 	return p
 }
@@ -156,12 +158,20 @@ parser_expr_stmt :: proc(p: ^Parser) -> ^ast.Expr_Stmt {
 	return stmt
 }
 
+
+no_prefix_parse_fn_error :: proc(p: ^Parser, t: lexer.TokenType) {
+	msg := fmt.tprintf("no prefix parse function for '%s' found", t)
+	append(&p.errors, msg)
+}
+
 parse_expr :: proc(p: ^Parser, prec: precedence) -> ^ast.Expr {
 	prefix := p.prefix_parse_fns[p.cur_token.type]
 	if prefix == nil {
+		no_prefix_parse_fn_error(p, p.cur_token.type)
 		return nil
 	}
 	left_expr := prefix(p)
+
 	return left_expr
 }
 
@@ -185,6 +195,18 @@ parse_int_literal :: proc(p: ^Parser) -> ^ast.Expr {
 	}
 
 	expr.value = value
+
+	return expr
+}
+
+parse_prefix_expr :: proc(p: ^Parser) -> ^ast.Expr {
+	expr := ast.new_node(ast.Prefix_Expr)
+	expr.token = p.cur_token
+	expr.operator = p.cur_token.literal
+
+	next_token(p)
+
+	expr.right = parse_expr(p, .PREFIX)
 
 	return expr
 }
