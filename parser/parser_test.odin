@@ -160,7 +160,7 @@ test_ident_expr :: proc(t: ^testing.T) {
 	}
 
 	if stmt.expr == nil {
-		panic("stmt.expr == nil; use 'useregister_prefix'")
+		panic("stmt.expr == nil; use 'register_prefix'")
 	}
 
 	ident, ok_ident := stmt.expr.derived.(^ast.Ident)
@@ -209,7 +209,7 @@ test_int_literal_expr :: proc(t: ^testing.T) {
 	}
 
 	if stmt.expr == nil {
-		panic("stmt.expr == nil; use 'useregister_prefix'")
+		panic("stmt.expr == nil; use 'register_prefix'")
 	}
 
 	literal, ok_literal := stmt.expr.derived.(^ast.Int_Literal)
@@ -266,7 +266,7 @@ test_parsing_prefix_expr :: proc(t: ^testing.T) {
 		}
 
 		if stmt.expr == nil {
-			panic("stmt.expr == nil; use 'useregister_prefix'")
+			panic("stmt.expr == nil; use 'register_prefix'")
 		}
 
 		expr, ok_expr := stmt.expr.derived.(^ast.Prefix_Expr)
@@ -308,6 +308,114 @@ test_int_literal :: proc(t: ^testing.T, il: ^ast.Expr, value: i64) -> bool {
 	return true
 }
 
+test_parsing_infix_expr :: proc(t: ^testing.T) {
+	infix_tests := []struct {
+		input:       string,
+		left_value:  i64,
+		operator:    string,
+		right_value: i64,
+	} {
+		{"5 + 5;", 5, "+", 5},
+		{"5 - 5;", 5, "-", 5},
+		{"5 * 5;", 5, "*", 5},
+		{"5 / 5;", 5, "/", 5},
+		{"5 > 5;", 5, ">", 5},
+		{"5 < 5;", 5, "<", 5},
+		{"5 == 5;", 5, "==", 5},
+		{"5 != 5;", 5, "!=", 5},
+	}
+
+	for tt in infix_tests {
+
+		l := lexer.new_lexer(tt.input)
+		defer lexer.delete_lexer(l)
+
+		p := new_parser(l)
+		defer delete_parser(p)
+
+		program := parse_program(p)
+		defer ast.delete_program(program)
+
+		check_parser_errors(t, p)
+
+		if len(program.statements) != 1 {
+			fmt.panicf(
+				"program.statements does not contain %d statements. got=%d",
+				1,
+				len(program.statements),
+			)
+		}
+
+		stmt, ok_stmt := program.statements[0].derived.(^ast.Expr_Stmt)
+		if !ok_stmt {
+			fmt.panicf(
+				"program.statements[0].derived is not ^ast.Expr_Stmt. got=%T",
+				program.statements[0],
+			)
+		}
+
+		if stmt.expr == nil {
+			panic("stmt.expr == nil; use 'register_infix'")
+		}
+
+		expr, ok_expr := stmt.expr.derived.(^ast.Infix_Expr)
+		if !ok_expr {
+			fmt.panicf("exp is not ^ast.Infix_Expr. got=%T", stmt.expr)
+		}
+		if !test_int_literal(t, expr.left, tt.left_value) {
+			return
+		}
+		if expr.operator != tt.operator {
+			fmt.panicf("expr.operator is not '%s'. got=%s", tt.operator, expr.operator)
+		}
+		if !test_int_literal(t, expr.right, tt.right_value) {
+			return
+		}
+	}
+}
+
+test_operator_precedence_parsing :: proc(t: ^testing.T) {
+	infix_tests := []struct {
+		input:    string,
+		expected: string,
+	} {
+		{"-a * b", "((-a) * b)"},
+		{"!-a", "(!(-a))"},
+		{"a + b + c", "((a + b) + c)"},
+		{"a + b - c", "((a + b) - c)"},
+		{"a * b * c", "((a * b) * c)"},
+		{"a * b / c", "((a * b) / c)"},
+		{"a + b / c", "(a + (b / c))"},
+		{"a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"},
+		{"3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"},
+		{"5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"},
+		{"5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"},
+		{"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
+		// {"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
+	}
+
+	for tt in infix_tests {
+
+		l := lexer.new_lexer(tt.input)
+		defer lexer.delete_lexer(l)
+
+		p := new_parser(l)
+		defer delete_parser(p)
+
+		program := parse_program(p)
+		defer ast.delete_program(program)
+
+		check_parser_errors(t, p)
+
+		actual := ast.to_string(program)
+		// fmt.println(actual)
+		defer delete(actual)
+		if actual != tt.expected {
+			testing.errorf(t, "expected=%q, got=%q", tt.expected, actual)
+		}
+	}
+}
+
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
@@ -342,5 +450,7 @@ test_parser_main :: proc(t: ^testing.T) {
 	// run_test(t, "[RUN] test_return_stmts", test_return_stmts)
 	// run_test(t, "[RUN] test_ident_expr", test_ident_expr)
 	// run_test(t, "[RUN] test_int_literal_expr", test_int_literal_expr)
-	run_test(t, "[RUN] test_parsing_prefix_expr", test_parsing_prefix_expr)
+	// run_test(t, "[RUN] test_parsing_prefix_expr", test_parsing_prefix_expr)
+	// run_test(t, "[RUN] test_parsing_infix_expr", test_parsing_infix_expr)
+	run_test(t, "[RUN] test_operator_precedence_parsing", test_operator_precedence_parsing)
 }

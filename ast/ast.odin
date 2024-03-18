@@ -4,6 +4,7 @@ import "core:bytes"
 import "core:fmt"
 import "core:intrinsics"
 import "core:mem"
+import "core:strings"
 
 import "../lexer"
 
@@ -20,9 +21,9 @@ Any_Node :: union {
 	^Ident,
 	^Int_Literal,
 	^Prefix_Expr,
+	^Infix_Expr,
 	// ^String_Literal,
 	// ^Bool_Literal,
-	// ^Infix_Expr,
 	// ^If_Expr,
 	// ^Function_Literal,
 	// ^Call_Expr,
@@ -94,6 +95,14 @@ Prefix_Expr :: struct {
 	right:      ^Expr,
 }
 
+Infix_Expr :: struct {
+	using node: Expr,
+	token:      lexer.Token,
+	left:       ^Expr,
+	operator:   string,
+	right:      ^Expr,
+}
+
 new_node :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
 	node := new(T)
 	node.derived = node
@@ -150,6 +159,11 @@ free_expr_stmt :: proc(expr: ^Expr) {
 	case ^Prefix_Expr:
 		free_expr_stmt(t.right)
 		free(t.right)
+	case ^Infix_Expr:
+		free_expr_stmt(t.left)
+		free(t.left)
+		free_expr_stmt(t.right)
+		free(t.right)
 	}
 }
 
@@ -171,10 +185,11 @@ token_literal :: proc(node: Node) -> string {
 		return int_literal_token_literal(v)
 	case ^Prefix_Expr:
 		return prefix_expr_token_literal(v)
+	case ^Infix_Expr:
+		return infix_expr_token_literal(v)
 	// case ^Block_Stmt: return block_stmt_string(v)
 	// case ^String_Literal: return string_literal_string(v)
 	// case ^Bool_Literal: return bool_literal_string(v)
-	// case ^Infix_Expr: return infix_expr_string(v)
 	// case ^If_Expr: return if_expr_string(v)
 	// case ^Function_Literal: return function_expr_string(v)
 	// case ^Call_Expr: return call_expr_string(v)
@@ -218,6 +233,10 @@ prefix_expr_token_literal :: proc(e: ^Prefix_Expr) -> string {
 	return e.token.literal
 }
 
+infix_expr_token_literal :: proc(e: ^Infix_Expr) -> string {
+	return e.token.literal
+}
+
 // to_string
 
 to_string :: proc(node: Node) -> string {
@@ -236,14 +255,14 @@ to_string :: proc(node: Node) -> string {
 		return int_literal_to_string(v)
 	case ^Prefix_Expr:
 		return prefix_expr_to_string(v)
+	case ^Infix_Expr:
+		return infix_expr_to_string(v)
 	// case ^Block_Stmt:
 	// 	return block_stmt_string(v)
 	// case ^String_Literal:
 	// 	return string_literal_string(v)
 	// case ^Bool_Literal:
 	// 	return bool_literal_string(v)
-	// case ^Infix_Expr:
-	// 	return infix_expr_string(v)
 	// case ^If_Expr:
 	// 	return if_expr_string(v)
 	// case ^Function_Literal:
@@ -262,12 +281,16 @@ to_string :: proc(node: Node) -> string {
 }
 
 program_to_string :: proc(p: ^Program) -> string {
+	// fmt.println("In [Fn] program_to_string")
 	out: bytes.Buffer
+	// defer bytes.buffer_destroy(&out)
 
 	for stmt in p.statements {
-		s := to_string(stmt)
-		bytes.buffer_write(&out, transmute([]u8)s)
-		delete(s)
+		// fmt.println(s)
+		// s := to_string(stmt)
+		// defer delete(s)
+		// bytes.buffer_write(&out, transmute([]u8)s)
+		bytes.buffer_write(&out, transmute([]u8)to_string(stmt))
 	}
 
 	return bytes.buffer_to_string(&out)
@@ -275,6 +298,7 @@ program_to_string :: proc(p: ^Program) -> string {
 
 let_stmt_to_string :: proc(s: ^Let_Stmt) -> string {
 	out: bytes.Buffer
+	// defer bytes.buffer_destroy(&out)
 
 	bytes.buffer_write(&out, transmute([]u8)token_literal(s))
 	bytes.buffer_write(&out, transmute([]u8)string(" "))
@@ -292,6 +316,7 @@ let_stmt_to_string :: proc(s: ^Let_Stmt) -> string {
 
 return_stmt_to_string :: proc(s: ^Return_Stmt) -> string {
 	out: bytes.Buffer
+	// defer bytes.buffer_destroy(&out)
 
 	bytes.buffer_write(&out, transmute([]u8)token_literal(s))
 	bytes.buffer_write(&out, transmute([]u8)string(" "))
@@ -326,10 +351,28 @@ int_literal_to_string :: proc(e: ^Int_Literal) -> string {
 }
 
 prefix_expr_to_string :: proc(e: ^Prefix_Expr) -> string {
+	// fmt.println("In [Fn] prefix_expr_to_string")
 	out: bytes.Buffer
+	// defer bytes.buffer_destroy(&out)
 
 	bytes.buffer_write(&out, transmute([]u8)string("("))
 	bytes.buffer_write(&out, transmute([]u8)e.operator)
+	bytes.buffer_write(&out, transmute([]u8)to_string(e.right))
+	bytes.buffer_write(&out, transmute([]u8)string(")"))
+
+	return bytes.buffer_to_string(&out)
+}
+
+infix_expr_to_string :: proc(e: ^Infix_Expr) -> string {
+	// fmt.println("In [Fn] infix_expr_to_string")
+	out: bytes.Buffer
+	// defer bytes.buffer_destroy(&out)
+
+	bytes.buffer_write(&out, transmute([]u8)string("("))
+	bytes.buffer_write(&out, transmute([]u8)to_string(e.left))
+	bytes.buffer_write(&out, transmute([]u8)string(" "))
+	bytes.buffer_write(&out, transmute([]u8)e.operator)
+	bytes.buffer_write(&out, transmute([]u8)string(" "))
 	bytes.buffer_write(&out, transmute([]u8)to_string(e.right))
 	bytes.buffer_write(&out, transmute([]u8)string(")"))
 

@@ -17,11 +17,20 @@ precedence :: enum {
 	CALL, // my_function(X)
 }
 
+precedences := map[lexer.TokenType]precedence {
+	lexer.EQ       = .EQUALS,
+	lexer.NOT_EQ   = .EQUALS,
+	lexer.LT       = .LESSGREATER,
+	lexer.GT       = .LESSGREATER,
+	lexer.PLUS     = .SUM,
+	lexer.MINUS    = .SUM,
+	lexer.SLASH    = .PRODUCT,
+	lexer.ASTERISK = .PRODUCT,
+}
+
+
 prefix_parse_fn :: proc(_: ^Parser) -> ^ast.Expr
 infix_parse_fn :: proc(_: ^Parser, _: ^ast.Expr) -> ^ast.Expr
-
-// prefix_parse_fn :: proc() -> ^ast.Expr
-// infix_parse_fn :: proc(_: ^ast.Expr) -> ^ast.Expr
 
 register_prefix :: proc(p: ^Parser, token_type: lexer.TokenType, fn: prefix_parse_fn) {
 	p.prefix_parse_fns[token_type] = fn
@@ -54,6 +63,15 @@ new_parser :: proc(l: ^lexer.Lexer) -> ^Parser {
 	register_prefix(p, lexer.INT, parse_int_literal)
 	register_prefix(p, lexer.BANG, parse_prefix_expr)
 	register_prefix(p, lexer.MINUS, parse_prefix_expr)
+
+	register_infix(p, lexer.PLUS, parse_infix_expr)
+	register_infix(p, lexer.MINUS, parse_infix_expr)
+	register_infix(p, lexer.SLASH, parse_infix_expr)
+	register_infix(p, lexer.ASTERISK, parse_infix_expr)
+	register_infix(p, lexer.EQ, parse_infix_expr)
+	register_infix(p, lexer.NOT_EQ, parse_infix_expr)
+	register_infix(p, lexer.LT, parse_infix_expr)
+	register_infix(p, lexer.GT, parse_infix_expr)
 
 	return p
 }
@@ -158,7 +176,6 @@ parser_expr_stmt :: proc(p: ^Parser) -> ^ast.Expr_Stmt {
 	return stmt
 }
 
-
 no_prefix_parse_fn_error :: proc(p: ^Parser, t: lexer.TokenType) {
 	msg := fmt.tprintf("no prefix parse function for '%s' found", t)
 	append(&p.errors, msg)
@@ -171,6 +188,17 @@ parse_expr :: proc(p: ^Parser, prec: precedence) -> ^ast.Expr {
 		return nil
 	}
 	left_expr := prefix(p)
+
+	for !peek_token_is(p, lexer.SEMICOLON) && prec < peek_precedence(p) {
+		infix := p.infix_parse_fns[p.peek_token.type]
+		if infix == nil {
+			return left_expr
+		}
+
+		next_token(p)
+
+		left_expr = infix(p, left_expr)
+	}
 
 	return left_expr
 }
@@ -211,6 +239,19 @@ parse_prefix_expr :: proc(p: ^Parser) -> ^ast.Expr {
 	return expr
 }
 
+parse_infix_expr :: proc(p: ^Parser, left: ^ast.Expr) -> ^ast.Expr {
+	expr := ast.new_node(ast.Infix_Expr)
+	expr.token = p.cur_token
+	expr.operator = p.cur_token.literal
+	expr.left = left
+
+	prec := cur_precedence(p)
+	next_token(p)
+	expr.right = parse_expr(p, prec)
+
+	return expr
+}
+
 cur_token_is :: proc(p: ^Parser, t: lexer.TokenType) -> bool {
 	return p.cur_token.type == t
 }
@@ -227,4 +268,18 @@ expect_peek :: proc(p: ^Parser, t: lexer.TokenType) -> bool {
 		peek_error(p, t)
 		return false
 	}
+}
+
+peek_precedence :: proc(p: ^Parser) -> precedence {
+	if prec, ok := precedences[p.peek_token.type]; ok {
+		return prec
+	}
+	return .LOWEST
+}
+
+cur_precedence :: proc(p: ^Parser) -> precedence {
+	if prec, ok := precedences[p.cur_token.type]; ok {
+		return prec
+	}
+	return .LOWEST
 }
