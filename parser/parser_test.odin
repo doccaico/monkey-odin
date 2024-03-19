@@ -407,8 +407,6 @@ test_operator_precedence_parsing :: proc(t: ^testing.T) {
 			"add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
 		},
 		{"add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"},
-		// Original
-		// {"a + add(b * c)", "(a + add((b * c)))"},
 	}
 
 	for tt in infix_tests {
