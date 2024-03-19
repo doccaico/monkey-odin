@@ -401,6 +401,14 @@ test_operator_precedence_parsing :: proc(t: ^testing.T) {
 		{"2 / (5 + 5)", "(2 / (5 + 5))"},
 		{"-(5 + 5)", "(-(5 + 5))"},
 		{"!(true == true)", "(!(true == true))"},
+		{"a + add(b * c) + d", "((a + add((b * c))) + d)"},
+		 {
+			"add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+			"add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+		},
+		{"add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"},
+		// Original
+		// {"a + add(b * c)", "(a + add((b * c)))"},
 	}
 
 	for tt in infix_tests {
@@ -797,7 +805,132 @@ test_function_literal_parsing :: proc(t: ^testing.T) {
 			}
 		}
 	} // end: "x + y"
+}
 
+test_call_expr_parsing :: proc(t: ^testing.T) {
+	input := "add(1, 2 * 3, 4 + 5);"
+
+	l := lexer.new_lexer(input)
+	defer lexer.delete_lexer(l)
+
+	p := new_parser(l)
+	defer delete_parser(p)
+
+	program := parse_program(p)
+	defer ast.delete_program(program)
+
+	check_parser_errors(t, p)
+
+	if len(program.statements) != 1 {
+		fmt.panicf(
+			"program.statements does not contain %d statements. got=%d",
+			1,
+			len(program.statements),
+		)
+	}
+
+	stmt, ok_stmt := program.statements[0].derived.(^ast.Expr_Stmt)
+	if !ok_stmt {
+		fmt.panicf(
+			"program.statements[0].derived is not ^ast.Expr_Stmt. got=%T",
+			program.statements[0],
+		)
+	}
+
+	expr, ok_expr := stmt.expr.derived.(^ast.Call_Expr)
+	if !ok_expr {
+		fmt.panicf("stmt.expr is not ^ast.Call_Expr. got=%T", stmt.expr)
+	}
+
+	{
+		// "add"
+		ident, ok_ident := expr.function.derived.(^ast.Ident)
+		if !ok_ident {
+			fmt.panicf("expr.function is not ^ast.Ident. got=%T", expr.function)
+		}
+		if ident.value != "add" {
+			testing.errorf(t, "ident.value is not =%v, got=%v", "add", ident.value)
+		}
+	}
+
+	if len(expr.arguments) != 3 {
+		fmt.panicf("wrong length of arguments. got=%d", len(expr.arguments))
+	}
+
+	{
+		// 1
+		ilit, ok_ilit := expr.arguments[0].derived.(^ast.Int_Literal)
+		if !ok_ilit {
+			fmt.panicf("expr.arguments[0] is not ^ast.Int_Literal . got=%T", expr.arguments[0])
+		}
+		if ilit.value != 1 {
+			testing.errorf(t, "ident.value is not =%d, got=%v", 1, ilit.value)
+		}
+	}
+
+	{
+		// 2 * 3
+		infix, ok_infix := expr.arguments[1].derived.(^ast.Infix_Expr)
+		if !ok_infix {
+			fmt.panicf("expr.arguments[1] is not ^ast.Infix_Expr. got=%T", expr.arguments[1])
+		}
+
+		{
+			ilit, ok_ilit := infix.left.derived.(^ast.Int_Literal)
+			if !ok_ilit {
+				fmt.panicf("infix.left is not ^ast.Int_Literal. got=%T", infix.left)
+			}
+			if ilit.value != 2 {
+				testing.errorf(t, "ilit.value is not =%d, got=%v", 2, ilit.value)
+			}
+		}
+
+		if infix.operator != "*" {
+			testing.errorf(t, "infix.operator is not '%s'. got='%s'", "*", infix.operator)
+		}
+
+		{
+			ilit, ok_ilit := infix.right.derived.(^ast.Int_Literal)
+			if !ok_ilit {
+				fmt.panicf("infix.right is not ^ast.Int_Literal. got=%T", infix.left)
+			}
+			if ilit.value != 3 {
+				testing.errorf(t, "ilit.value is not =%d, got=%v", 3, ilit.value)
+			}
+		}
+	}
+
+	{
+		// 4 + 5
+		infix, ok_infix := expr.arguments[2].derived.(^ast.Infix_Expr)
+		if !ok_infix {
+			fmt.panicf("expr.arguments[2] is not ^ast.Infix_Expr. got=%T", expr.arguments[2])
+		}
+
+		{
+			ilit, ok_ilit := infix.left.derived.(^ast.Int_Literal)
+			if !ok_ilit {
+				fmt.panicf("infix.left is not ^ast.Int_Literal. got=%T", infix.left)
+			}
+			if ilit.value != 4 {
+				testing.errorf(t, "ilit.value is not =%d, got=%v", 4, ilit.value)
+			}
+		}
+
+		if infix.operator != "+" {
+			testing.errorf(t, "infix.operator is not '%s'. got='%s'", "+", infix.operator)
+		}
+
+		{
+			ilit, ok_ilit := infix.right.derived.(^ast.Int_Literal)
+			if !ok_ilit {
+				fmt.panicf("infix.right is not ^ast.Int_Literal. got=%T", infix.right)
+			}
+			if ilit.value != 5 {
+				testing.errorf(t, "ilit.value is not =%d, got=%v", 5, ilit.value)
+			}
+		}
+	}
 }
 
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
@@ -843,4 +976,5 @@ test_parser_main :: proc(t: ^testing.T) {
 	run_test(t, "[RUN] test_parsing_prefix_expr_bool", test_parsing_prefix_expr_bool)
 	run_test(t, "[RUN] test_if_expr", test_if_expr)
 	run_test(t, "[RUN] test_function_literal_parsing", test_function_literal_parsing)
+	run_test(t, "[RUN] test_call_expr_parsing", test_call_expr_parsing)
 }

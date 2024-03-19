@@ -26,6 +26,7 @@ precedences := map[lexer.TokenType]precedence {
 	lexer.MINUS    = .SUM,
 	lexer.SLASH    = .PRODUCT,
 	lexer.ASTERISK = .PRODUCT,
+	lexer.LPAREN   = .CALL,
 }
 
 
@@ -77,6 +78,7 @@ new_parser :: proc(l: ^lexer.Lexer) -> ^Parser {
 	register_infix(p, lexer.NOT_EQ, parse_infix_expr)
 	register_infix(p, lexer.LT, parse_infix_expr)
 	register_infix(p, lexer.GT, parse_infix_expr)
+	register_infix(p, lexer.LPAREN, parse_call_expr)
 
 	return p
 }
@@ -352,7 +354,6 @@ parse_function_literal :: proc(p: ^Parser) -> ^ast.Expr {
 
 parse_function_parameters :: proc(p: ^Parser) -> [dynamic]^ast.Ident {
 	identifiers: [dynamic]^ast.Ident
-	// defer delete(params)
 
 	if peek_token_is(p, lexer.RPAREN) {
 		next_token(p)
@@ -380,6 +381,39 @@ parse_function_parameters :: proc(p: ^Parser) -> [dynamic]^ast.Ident {
 	}
 
 	return identifiers
+}
+
+parse_call_expr :: proc(p: ^Parser, function: ^ast.Expr) -> ^ast.Expr {
+	expr := ast.new_node(ast.Call_Expr)
+	expr.token = p.cur_token
+	expr.function = function
+	expr.arguments = parse_call_arguments(p)
+
+	return expr
+}
+
+parse_call_arguments :: proc(p: ^Parser) -> [dynamic]^ast.Expr {
+	args: [dynamic]^ast.Expr
+
+	if peek_token_is(p, lexer.RPAREN) {
+		next_token(p)
+		return args
+	}
+
+	next_token(p)
+	append(&args, parse_expr(p, .LOWEST))
+
+	for peek_token_is(p, lexer.COMMA) {
+		next_token(p)
+		next_token(p)
+		append(&args, parse_expr(p, .LOWEST))
+	}
+
+	if !expect_peek(p, lexer.RPAREN) {
+		return nil
+	}
+
+	return args
 }
 
 cur_token_is :: proc(p: ^Parser, t: lexer.TokenType) -> bool {

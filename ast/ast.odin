@@ -25,8 +25,8 @@ Any_Node :: union {
 	^Bool_Literal,
 	^If_Expr,
 	^Function_Literal,
+	^Call_Expr,
 	// ^String_Literal,
-	// ^Call_Expr,
 	// ^Array_Literal,
 	// ^Index_Expr,
 	// ^Hash_Expr,
@@ -128,6 +128,13 @@ Function_Literal :: struct {
 	token:      lexer.Token,
 	parameters: [dynamic]^Ident,
 	body:       ^Block_Stmt,
+}
+
+Call_Expr :: struct {
+	using node: Expr,
+	token:      lexer.Token,
+	function:   ^Expr,
+	arguments:  [dynamic]^Expr,
 }
 
 new_node :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
@@ -235,6 +242,13 @@ free_expr_stmt :: proc(expr: ^Expr) {
 		free(t)
 	case ^Int_Literal:
 		free(t)
+	case ^Call_Expr:
+		free_expr_stmt(t.function)
+		for expr in t.arguments {
+			free_expr_stmt(expr)
+		}
+		delete(t.arguments)
+		free(t)
 	// case ^Expr_Stmt:
 	// 	fmt.printf("Expr_Stmt\n")
 	// case ^Bool_Literal:
@@ -272,10 +286,11 @@ token_literal :: proc(node: Node) -> string {
 		return if_expr_token_literal(v)
 	case ^Block_Stmt:
 		return block_stmt_token_literal(v)
-	// case ^String_Literal: return string_literal_string(v)
 	case ^Function_Literal:
 		return function_literal_token_literal(v)
-	// case ^Call_Expr: return call_expr_string(v)
+	case ^Call_Expr:
+		return call_expr_token_literal(v)
+	// case ^String_Literal: return string_literal_string(v)
 	// case ^Array_Literal: return array_expr_string(v)
 	// case ^Index_Expr: return index_expr_string(v)
 	// case ^Hash_Expr: return hash_expr_string(v)
@@ -336,6 +351,10 @@ function_literal_token_literal :: proc(e: ^Function_Literal) -> string {
 	return e.token.literal
 }
 
+call_expr_token_literal :: proc(e: ^Call_Expr) -> string {
+	return e.token.literal
+}
+
 // to_string
 
 to_string :: proc(node: Node) -> bytes.Buffer {
@@ -364,10 +383,10 @@ to_string :: proc(node: Node) -> bytes.Buffer {
 		return block_stmt_to_string(v)
 	case ^Function_Literal:
 		return function_literal_to_string(v)
+	case ^Call_Expr:
+		return call_expr_to_string(v)
 	// case ^String_Literal:
 	// 	return string_literal_string(v)
-	// case ^Call_Expr:
-	// 	return call_expr_string(v)
 	// case ^Array_Literal:
 	// 	return array_expr_string(v)
 	// case ^Index_Expr:
@@ -383,6 +402,7 @@ program_to_string :: proc(p: ^Program) -> bytes.Buffer {
 	out: bytes.Buffer
 
 	for stmt in p.statements {
+
 		buf := to_string(stmt)
 		defer bytes.buffer_destroy(&buf)
 		bytes.buffer_write(&out, bytes.buffer_to_bytes(&buf))
@@ -547,6 +567,7 @@ function_literal_to_string :: proc(e: ^Function_Literal) -> bytes.Buffer {
 	defer delete(params)
 
 	for p in e.parameters {
+
 		buf := to_string(p)
 		defer bytes.buffer_destroy(&buf)
 		append(&params, bytes.buffer_to_string(&buf))
@@ -554,12 +575,51 @@ function_literal_to_string :: proc(e: ^Function_Literal) -> bytes.Buffer {
 
 	bytes.buffer_write_string(&out, token_literal(e))
 	bytes.buffer_write_string(&out, "(")
-	bytes.buffer_write_string(&out, strings.join(params[:], ", "))
+
+	s := strings.join(params[:], ", ")
+	bytes.buffer_write_string(&out, s)
+	delete(s)
+
 	bytes.buffer_write_string(&out, ")")
 
 	buf := to_string(e.body)
 	defer bytes.buffer_destroy(&buf)
 	bytes.buffer_write(&out, bytes.buffer_to_bytes(&buf))
+
+	return out
+}
+
+call_expr_to_string :: proc(e: ^Call_Expr) -> bytes.Buffer {
+	out: bytes.Buffer
+
+	bufs: [dynamic]bytes.Buffer
+	defer {
+		for buf in &bufs {
+			bytes.buffer_destroy(&buf)
+		}
+		delete(bufs)
+	}
+
+	for arg in e.arguments {
+		append(&bufs, to_string(arg))
+	}
+
+	buf := to_string(e.function)
+	defer bytes.buffer_destroy(&buf)
+	bytes.buffer_write(&out, bytes.buffer_to_bytes(&buf))
+
+	bytes.buffer_write_string(&out, "(")
+
+	string_array: [dynamic]string
+	defer delete(string_array)
+	for b in &bufs {
+		append(&string_array, bytes.buffer_to_string(&b))
+	}
+	s := strings.join(string_array[:], ", ")
+	defer delete(s)
+	bytes.buffer_write_string(&out, s)
+
+	bytes.buffer_write_string(&out, ")")
 
 	return out
 }
