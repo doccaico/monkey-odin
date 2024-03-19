@@ -131,43 +131,45 @@ parse_statement :: proc(p: ^Parser) -> ^ast.Stmt {
 }
 
 parse_let_stmt :: proc(p: ^Parser) -> ^ast.Stmt {
-	let := ast.new_node(ast.Let_Stmt)
-	let.token = p.cur_token
+	stmt := ast.new_node(ast.Let_Stmt)
+	stmt.token = p.cur_token
 
 	if !expect_peek(p, lexer.IDENT) {
 		return nil
 	}
 
-	let.name = ast.new_node(ast.Ident)
-	let.name.token = p.cur_token
-	let.name.value = p.cur_token.literal
+	stmt.name = ast.new_node(ast.Ident)
+	stmt.name.token = p.cur_token
+	stmt.name.value = p.cur_token.literal
 
 	if !expect_peek(p, lexer.ASSIGN) {
 		return nil
 	}
 
-	// TODO: We're skipping the expressions until we
-	// encounter a semicolon
-	for !cur_token_is(p, lexer.SEMICOLON) {
+	next_token(p)
+
+	stmt.value = parse_expr(p, .LOWEST)
+
+	if peek_token_is(p, lexer.SEMICOLON) {
 		next_token(p)
 	}
 
-	return let
+	return stmt
 }
 
 parse_return_stmt :: proc(p: ^Parser) -> ^ast.Stmt {
-	ret := ast.new_node(ast.Return_Stmt)
-	ret.token = p.cur_token
+	stmt := ast.new_node(ast.Return_Stmt)
+	stmt.token = p.cur_token
 
 	next_token(p)
 
-	// TODO: We're skipping the expressions until we
-	// encounter a semicolon
-	for !cur_token_is(p, lexer.SEMICOLON) {
+	stmt.return_value = parse_expr(p, .LOWEST)
+
+	if peek_token_is(p, lexer.SEMICOLON) {
 		next_token(p)
 	}
 
-	return ret
+	return stmt
 }
 
 parser_expr_stmt :: proc(p: ^Parser) -> ^ast.Expr_Stmt {

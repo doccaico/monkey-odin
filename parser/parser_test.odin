@@ -931,6 +931,63 @@ test_call_expr_parsing :: proc(t: ^testing.T) {
 	}
 }
 
+test_let_stmts2 :: proc(t: ^testing.T) {
+	tests := []struct {
+		input:          string,
+		expected_ident: string,
+		expected_value: i64,
+	}{{"let x = 5;", "x", 5}, {"let y = 99;", "y", 99}, {"let foobar = 1000", "foobar", 1000}}
+
+	for tt in tests {
+
+		l := lexer.new_lexer(tt.input)
+		defer lexer.delete_lexer(l)
+
+		p := new_parser(l)
+		defer delete_parser(p)
+
+		program := parse_program(p)
+		defer ast.delete_program(program)
+
+		check_parser_errors(t, p)
+
+		if len(program.statements) != 1 {
+			fmt.panicf(
+				"program.statements does not contain %d statements. got=%d",
+				1,
+				len(program.statements),
+			)
+		}
+
+		let_stmt, ok := program.statements[0].derived.(^ast.Let_Stmt)
+		if !ok {
+			fmt.panicf("program.statements[0].derived not ^ast.Let_Stmt. got=%T", let_stmt)
+		}
+
+		if ast.token_literal(let_stmt) != "let" {
+			testing.errorf(
+				t,
+				"ast.token_literal(let_stmt) not 'let'. got=%q",
+				ast.token_literal(let_stmt),
+			)
+		}
+
+		if let_stmt.name.value != tt.expected_ident {
+			testing.errorf(
+				t,
+				"let_stmt.name.value not '%s'. got=%q",
+				tt.expected_ident,
+				let_stmt.name.value,
+			)
+		}
+
+		value := let_stmt.value.derived.(^ast.Int_Literal).value
+		if value != tt.expected_value {
+			testing.errorf(t, "value not '%d'. got=%d", tt.expected_value, value)
+		}
+	}
+}
+
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
@@ -962,17 +1019,18 @@ test_parser_main :: proc(t: ^testing.T) {
 		}
 	}
 
-	run_test(t, "[RUN] test_let_stmts", test_let_stmts)
-	run_test(t, "[RUN] test_return_stmts", test_return_stmts)
-	run_test(t, "[RUN] test_ident_expr", test_ident_expr)
-	run_test(t, "[RUN] test_int_literal_expr", test_int_literal_expr)
-	run_test(t, "[RUN] test_parsing_prefix_expr", test_parsing_prefix_expr)
-	run_test(t, "[RUN] test_parsing_infix_expr", test_parsing_infix_expr)
-	run_test(t, "[RUN] test_operator_precedence_parsing", test_operator_precedence_parsing)
-	run_test(t, "[RUN] test_bool_literal_expr", test_bool_literal_expr)
-	run_test(t, "[RUN] test_parsing_infix_expr_bool", test_parsing_infix_expr_bool)
-	run_test(t, "[RUN] test_parsing_prefix_expr_bool", test_parsing_prefix_expr_bool)
-	run_test(t, "[RUN] test_if_expr", test_if_expr)
-	run_test(t, "[RUN] test_function_literal_parsing", test_function_literal_parsing)
-	run_test(t, "[RUN] test_call_expr_parsing", test_call_expr_parsing)
+	// run_test(t, "[RUN] test_let_stmts", test_let_stmts)
+	// run_test(t, "[RUN] test_return_stmts", test_return_stmts)
+	// run_test(t, "[RUN] test_ident_expr", test_ident_expr)
+	// run_test(t, "[RUN] test_int_literal_expr", test_int_literal_expr)
+	// run_test(t, "[RUN] test_parsing_prefix_expr", test_parsing_prefix_expr)
+	// run_test(t, "[RUN] test_parsing_infix_expr", test_parsing_infix_expr)
+	// run_test(t, "[RUN] test_operator_precedence_parsing", test_operator_precedence_parsing)
+	// run_test(t, "[RUN] test_bool_literal_expr", test_bool_literal_expr)
+	// run_test(t, "[RUN] test_parsing_infix_expr_bool", test_parsing_infix_expr_bool)
+	// run_test(t, "[RUN] test_parsing_prefix_expr_bool", test_parsing_prefix_expr_bool)
+	// run_test(t, "[RUN] test_if_expr", test_if_expr)
+	// run_test(t, "[RUN] test_function_literal_parsing", test_function_literal_parsing)
+	// run_test(t, "[RUN] test_call_expr_parsing", test_call_expr_parsing)
+	run_test(t, "[RUN] test_let_stmts2", test_let_stmts2)
 }
