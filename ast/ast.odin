@@ -24,8 +24,8 @@ Any_Node :: union {
 	^Infix_Expr,
 	^Bool_Literal,
 	^If_Expr,
+	^Function_Literal,
 	// ^String_Literal,
-	// ^Function_Literal,
 	// ^Call_Expr,
 	// ^Array_Literal,
 	// ^Index_Expr,
@@ -123,12 +123,19 @@ If_Expr :: struct {
 	alternative: ^Block_Stmt,
 }
 
+Function_Literal :: struct {
+	using node: Expr,
+	token:      lexer.Token,
+	parameters: [dynamic]^Ident,
+	body:       ^Block_Stmt,
+}
+
 new_node :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
 	node := new(T)
 	node.derived = node
-	// fmt.println(node.derived)
-	// fmt.printf("%p\n", node)
-	// fmt.println()
+
+	// fmt.printf("%v\n", node)
+	// fmt.printf("Pointer: %p\n", node)
 
 	return node
 }
@@ -141,7 +148,7 @@ delete_program :: proc(program: ^Program) {
 		// fmt.println("In Program")
 		case ^Expr_Stmt:
 			free_expr_stmt(t.expr)
-			free(t.expr)
+		// free(t.expr)
 		case ^Let_Stmt:
 			// fmt.println("In Let_Stmt")
 			free(t.name)
@@ -182,20 +189,16 @@ delete_program :: proc(program: ^Program) {
 }
 
 free_expr_stmt :: proc(expr: ^Expr) {
-	// fmt.println(expr)
-	// fmt.println("In [Fn] free_expr_stmt")
 	#partial switch t in expr.expr_base.derived {
 	case ^Prefix_Expr:
 		free_expr_stmt(t.right)
-		free(t.right)
+		free(t)
 	case ^Infix_Expr:
 		free_expr_stmt(t.left)
-		free(t.left)
 		free_expr_stmt(t.right)
-		free(t.right)
+		free(t)
 	case ^If_Expr:
 		free_expr_stmt(t.condition)
-		free(t.condition)
 
 		for stmt in t.consequence.statements {
 			free(stmt.derived.(^Expr_Stmt).expr)
@@ -206,20 +209,36 @@ free_expr_stmt :: proc(expr: ^Expr) {
 
 		if t.alternative != nil {
 			for stmt in t.alternative.statements {
+				// free(stmt.derived.(^Expr_Stmt).expr)
 				free(stmt)
 			}
 			delete(t.alternative.statements)
 			free(t.alternative)
 		}
+		free(t)
+	case ^Function_Literal:
+		for ident in t.parameters {
+			free(ident)
+		}
+		delete(t.parameters)
+
+		for stmt in t.body.statements {
+			free_expr_stmt(stmt.derived.(^Expr_Stmt).expr)
+			free(stmt)
+		}
+		delete(t.body.statements)
+		free(t.body)
+		free(t)
+	case ^Bool_Literal:
+		free(t)
+	case ^Ident:
+		free(t)
+	case ^Int_Literal:
+		free(t)
 	// case ^Expr_Stmt:
 	// 	fmt.printf("Expr_Stmt\n")
 	// case ^Bool_Literal:
 	// 	fmt.printf("bool literal\n")
-	// case ^Ident:
-	// 	fmt.printf("In Ident %s\n", t.value)
-	// 	a := expr.expr_base.derived.(^Ident)
-	// 	free(a)
-	// free(t.value)
 	// case ^Block_Stmt:
 	// 	fmt.println("In Block_Stmt")
 	// case:
@@ -254,7 +273,8 @@ token_literal :: proc(node: Node) -> string {
 	case ^Block_Stmt:
 		return block_stmt_token_literal(v)
 	// case ^String_Literal: return string_literal_string(v)
-	// case ^Function_Literal: return function_expr_string(v)
+	case ^Function_Literal:
+		return function_literal_token_literal(v)
 	// case ^Call_Expr: return call_expr_string(v)
 	// case ^Array_Literal: return array_expr_string(v)
 	// case ^Index_Expr: return index_expr_string(v)
@@ -312,6 +332,10 @@ block_stmt_token_literal :: proc(e: ^Block_Stmt) -> string {
 	return e.token.literal
 }
 
+function_literal_token_literal :: proc(e: ^Function_Literal) -> string {
+	return e.token.literal
+}
+
 // to_string
 
 to_string :: proc(node: Node) -> bytes.Buffer {
@@ -338,10 +362,10 @@ to_string :: proc(node: Node) -> bytes.Buffer {
 		return if_expr_to_string(v)
 	case ^Block_Stmt:
 		return block_stmt_to_string(v)
+	case ^Function_Literal:
+		return function_literal_to_string(v)
 	// case ^String_Literal:
 	// 	return string_literal_string(v)
-	// case ^Function_Literal:
-	// 	return function_expr_string(v)
 	// case ^Call_Expr:
 	// 	return call_expr_string(v)
 	// case ^Array_Literal:
@@ -512,6 +536,30 @@ block_stmt_to_string :: proc(s: ^Block_Stmt) -> bytes.Buffer {
 		defer bytes.buffer_destroy(&buf)
 		bytes.buffer_write(&out, bytes.buffer_to_bytes(&buf))
 	}
+
+	return out
+}
+
+function_literal_to_string :: proc(e: ^Function_Literal) -> bytes.Buffer {
+	out: bytes.Buffer
+
+	params: [dynamic]string
+	defer delete(params)
+
+	for p in e.parameters {
+		buf := to_string(p)
+		defer bytes.buffer_destroy(&buf)
+		append(&params, bytes.buffer_to_string(&buf))
+	}
+
+	bytes.buffer_write_string(&out, token_literal(e))
+	bytes.buffer_write_string(&out, "(")
+	bytes.buffer_write_string(&out, strings.join(params[:], ", "))
+	bytes.buffer_write_string(&out, ")")
+
+	buf := to_string(e.body)
+	defer bytes.buffer_destroy(&buf)
+	bytes.buffer_write(&out, bytes.buffer_to_bytes(&buf))
 
 	return out
 }

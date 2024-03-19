@@ -2,7 +2,7 @@ package parser
 
 import "core:fmt"
 import "core:strconv"
-import "core:strings"
+// import "core:strings"
 
 import "../ast"
 import "../lexer"
@@ -67,6 +67,7 @@ new_parser :: proc(l: ^lexer.Lexer) -> ^Parser {
 	register_prefix(p, lexer.FALSE, parse_bool_literal)
 	register_prefix(p, lexer.LPAREN, parse_grouped_expr)
 	register_prefix(p, lexer.IF, parse_if_expr)
+	register_prefix(p, lexer.FUNCTION, parse_function_literal)
 
 	register_infix(p, lexer.PLUS, parse_infix_expr)
 	register_infix(p, lexer.MINUS, parse_infix_expr)
@@ -250,6 +251,8 @@ parse_infix_expr :: proc(p: ^Parser, left: ^ast.Expr) -> ^ast.Expr {
 	expr.operator = p.cur_token.literal
 	expr.left = left
 
+	// fmt.printf("parse_infix_expr: %p\n", expr)
+
 	prec := cur_precedence(p)
 	next_token(p)
 	expr.right = parse_expr(p, prec)
@@ -326,6 +329,57 @@ parse_block_stmt :: proc(p: ^Parser) -> ^ast.Block_Stmt {
 	}
 
 	return block
+}
+
+parse_function_literal :: proc(p: ^Parser) -> ^ast.Expr {
+	expr := ast.new_node(ast.Function_Literal)
+	expr.token = p.cur_token
+
+	if !expect_peek(p, lexer.LPAREN) {
+		return nil
+	}
+
+	expr.parameters = parse_function_parameters(p)
+
+	if !expect_peek(p, lexer.LBRACE) {
+		return nil
+	}
+
+	expr.body = parse_block_stmt(p)
+
+	return expr
+}
+
+parse_function_parameters :: proc(p: ^Parser) -> [dynamic]^ast.Ident {
+	identifiers: [dynamic]^ast.Ident
+	// defer delete(params)
+
+	if peek_token_is(p, lexer.RPAREN) {
+		next_token(p)
+		return identifiers
+	}
+
+	next_token(p)
+
+	ident := ast.new_node(ast.Ident)
+	ident.token = p.cur_token
+	ident.value = p.cur_token.literal
+	append(&identifiers, ident)
+
+	for peek_token_is(p, lexer.COMMA) {
+		next_token(p)
+		next_token(p)
+		ident := ast.new_node(ast.Ident)
+		ident.token = p.cur_token
+		ident.value = p.cur_token.literal
+		append(&identifiers, ident)
+	}
+
+	if !expect_peek(p, lexer.RPAREN) {
+		return nil
+	}
+
+	return identifiers
 }
 
 cur_token_is :: proc(p: ^Parser, t: lexer.TokenType) -> bool {
