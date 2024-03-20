@@ -56,9 +56,9 @@ new_object :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived
 	obj := new(T)
 	obj.derived = obj
 
-	// fmt.printf("1. Object: %v\n", obj)
-	// fmt.printf("2. Pointer: %p\n", obj)
-	// fmt.println()
+	fmt.printf("1. Object: %v\n", obj)
+	fmt.printf("2. Pointer: %p\n", obj)
+	fmt.println()
 
 	return obj
 }

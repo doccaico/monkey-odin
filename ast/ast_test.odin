@@ -56,7 +56,7 @@ run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 }
 
 @(test)
-test_parser_main :: proc(t: ^testing.T) {
+test_ast_main :: proc(t: ^testing.T) {
 
 	when ODIN_DEBUG {
 		track: mem.Tracking_Allocator

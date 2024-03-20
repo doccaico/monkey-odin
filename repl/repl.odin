@@ -21,6 +21,9 @@ start :: proc(stdin: io.Stream, stdout: io.Stream) {
 	evaluator.new_eval()
 	defer evaluator.delete_eval()
 
+	env := object.new_enviroment()
+	defer object.delete_enviroment(env)
+
 	for {
 		io.write_string(stdout, PROMPT)
 
@@ -54,9 +57,9 @@ start :: proc(stdin: io.Stream, stdout: io.Stream) {
 		// io.write_string(stdout, s)
 		// io.write_rune(stdout, '\n')
 
-		evaluated := evaluator.eval(program)
-		defer object.delete_object(evaluated)
-		if evaluated != nil {
+		evaluated := evaluator.eval(program, env)
+		// defer object.delete_object(evaluated)
+		if evaluated != evaluator.NULL {
 			io.write_string(stdout, object.inspect(evaluated))
 			io.write_rune(stdout, '\n')
 		}

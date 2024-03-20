@@ -264,8 +264,6 @@ parse_infix_expr :: proc(p: ^Parser, left: ^ast.Expr) -> ^ast.Expr {
 	expr.operator = p.cur_token.literal
 	expr.left = left
 
-	// fmt.printf("parse_infix_expr: %p\n", expr)
-
 	prec := cur_precedence(p)
 	next_token(p)
 	expr.right = parse_expr(p, prec)

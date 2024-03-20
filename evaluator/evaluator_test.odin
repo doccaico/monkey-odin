@@ -23,7 +23,10 @@ test_eval :: proc(input: string) -> ^object.Object {
 	program := parser.parse_program(p)
 	defer ast.delete_program(program)
 
-	return eval(program)
+	env := object.new_enviroment()
+	defer object.delete_enviroment(env)
+
+	return eval(program, env)
 }
 
 test_integer_object :: proc(t: ^testing.T, obj: ^object.Object, expected: i64) -> bool {
@@ -215,6 +218,7 @@ test_error_handling :: proc(t: ^testing.T) {
 		`,
 			"unknown operator: BOOLEAN + BOOLEAN",
 		},
+		{"foobar", "identifier not found: foobar"},
 	}
 
 	for tt in tests {
@@ -242,13 +246,31 @@ test_error_handling :: proc(t: ^testing.T) {
 	}
 }
 
+test_let_stmts :: proc(t: ^testing.T) {
+	tests := []struct {
+		input:    string,
+		expected: i64,
+	} {
+		// {"let a = 5; a;", 5},
+		// {"let a = 5 * 5; a;", 25},
+		// {"let a = 5; let b = a; b;", 5},
+		// {"let a = 5; let b = a; let c = a + b + 5; c;", 15},
+		{"let a = 5; let b = a; let c = a + b + 5; c;", 15},
+		// {"let a = 9999; let b = 1; let c = a + b; c; c;", 10000},
+	}
+
+	for tt in tests {
+		test_integer_object(t, test_eval(tt.input), tt.expected)
+	}
+}
+
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
 }
 
 @(test)
-test_parser_main :: proc(t: ^testing.T) {
+test_evaluator_main :: proc(t: ^testing.T) {
 
 	when ODIN_DEBUG {
 		track: mem.Tracking_Allocator
@@ -281,5 +303,6 @@ test_parser_main :: proc(t: ^testing.T) {
 	// run_test(t, "[RUN] test_bang_operator", test_bang_operator)
 	// run_test(t, "[RUN] test_if_else_expr", test_if_else_expr)
 	// run_test(t, "[RUN] test_return_stmts", test_return_stmts)
-	run_test(t, "[RUN] test_error_handling", test_error_handling)
+	// run_test(t, "[RUN] test_error_handling", test_error_handling)
+	run_test(t, "[RUN] test_let_stmts", test_let_stmts)
 }

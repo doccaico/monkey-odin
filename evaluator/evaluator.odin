@@ -11,12 +11,12 @@ TRUE: ^object.Boolean
 FALSE: ^object.Boolean
 NULL: ^object.Null
 
-eval :: proc(node: ast.Node) -> ^object.Object {
+eval :: proc(node: ast.Node, env: ^object.Environment) -> ^object.Object {
 	#partial switch v in node.derived {
 	case ^ast.Program:
-		return eval_program(v)
+		return eval_program(v, env)
 	case ^ast.Expr_Stmt:
-		return eval(v.expr)
+		return eval(v.expr, env)
 	case ^ast.Int_Literal:
 		obj := object.new_object(object.Integer)
 		obj.value = v.value
@@ -24,44 +24,53 @@ eval :: proc(node: ast.Node) -> ^object.Object {
 	case ^ast.Bool_Literal:
 		return native_bool_to_boolean_object(v.value)
 	case ^ast.Prefix_Expr:
-		right := eval(v.right)
+		right := eval(v.right, env)
 		if is_error(right) {
 			return right
 		}
 		return eval_prefix_expr(v.operator, right)
 	case ^ast.Infix_Expr:
-		left := eval(v.left)
+		left := eval(v.left, env)
 		if is_error(left) {
 			return left
 		}
-		right := eval(v.right)
+		right := eval(v.right, env)
 		if is_error(right) {
 			return right
 		}
 		return eval_infix_expr(v.operator, left, right)
 	case ^ast.Block_Stmt:
-		return eval_block_stmt(v)
+		return eval_block_stmt(v, env)
 	case ^ast.If_Expr:
-		return eval_if_expr(v)
+		return eval_if_expr(v, env)
 	case ^ast.Return_Stmt:
-		value := eval(v.return_value)
+		value := eval(v.return_value, env)
 		if is_error(value) {
 			return value
 		}
 		obj := object.new_object(object.Return_Value)
 		obj.value = value
 		return obj
+	case ^ast.Let_Stmt:
+		val := eval(v.value, env)
+		if is_error(val) {
+			return val
+		}
+		object.set(env, v.name.value, val)
+	case ^ast.Ident:
+		return eval_ident(v, env)
 	case:
 		panic("eval: unknown node type")
 	}
-	return nil
+
+	return NULL
 }
 
-eval_program :: proc(program: ^ast.Program) -> ^object.Object {
+eval_program :: proc(program: ^ast.Program, env: ^object.Environment) -> ^object.Object {
 	result: ^object.Object
 
 	for stmt in program.statements {
-		result = eval(stmt)
+		result = eval(stmt, env)
 
 		#partial switch v in result.derived {
 		case ^object.Integer:
@@ -81,11 +90,11 @@ eval_program :: proc(program: ^ast.Program) -> ^object.Object {
 	return result
 }
 
-eval_block_stmt :: proc(block: ^ast.Block_Stmt) -> ^object.Object {
+eval_block_stmt :: proc(block: ^ast.Block_Stmt, env: ^object.Environment) -> ^object.Object {
 	result: ^object.Object
 
 	for stmt in block.statements {
-		result = eval(stmt)
+		result = eval(stmt, env)
 
 		if result != nil {
 			rt := object.type(result)
@@ -234,23 +243,36 @@ eval_integer_infix_expr :: proc(
 			object.type(right),
 		)
 	}
-	free(left)
-	free(right)
+	if right == left {
+		free(left)
+	} else {
+		free(left)
+		free(right)
+	}
 	return obj
 }
 
-eval_if_expr :: proc(e: ^ast.If_Expr) -> ^object.Object {
-	condition := eval(e.condition)
+eval_if_expr :: proc(e: ^ast.If_Expr, env: ^object.Environment) -> ^object.Object {
+	condition := eval(e.condition, env)
 	if is_error(condition) {
 		return condition
 	}
 	if is_truthy(condition) {
-		return eval(e.consequence)
+		return eval(e.consequence, env)
 	} else if e.alternative != nil {
-		return eval(e.alternative)
+		return eval(e.alternative, env)
 	} else {
 		return NULL
 	}
+}
+
+eval_ident :: proc(node: ^ast.Ident, env: ^object.Environment) -> ^object.Object {
+	val, ok := object.get(env, node.value)
+	if !ok {
+		return new_error(fmt.tprintf("identifier not found: %s", node.value))
+	}
+
+	return val
 }
 
 is_truthy :: proc(obj: ^object.Object) -> bool {
