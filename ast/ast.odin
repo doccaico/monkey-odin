@@ -141,8 +141,9 @@ new_node :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived")
 	node := new(T)
 	node.derived = node
 
-	// fmt.printf("%v\n", node)
-	// fmt.printf("Pointer: %p\n", node)
+	fmt.printf("1. Node: %v\n", node)
+	fmt.printf("2. Pointer: %p\n", node)
+	fmt.println()
 
 	return node
 }
@@ -151,24 +152,25 @@ delete_program :: proc(program: ^Program) {
 	// fmt.println("In [Fn] delete_program")
 	for stmt in program.statements {
 		#partial switch t in stmt.expr_base.derived {
-		// case ^ast.Program:
-		// fmt.println("In Program")
+		// case ^Program:
+		// 	fmt.println("In Program")
 		case ^Expr_Stmt:
 			free_expr_stmt(t.expr)
-		// free(t.expr)
 		case ^Let_Stmt:
-			// fmt.println("In Let_Stmt")
+			// fmt.println(">>>>>> In Let_Stmt")
 			free(t.name)
-			free(t.value)
+			free_expr_stmt(t.value)
 		case ^Return_Stmt:
-			// fmt.printf("In Return_Stmt")
-			free(t.return_value)
+			free_expr_stmt(t.return_value)
 		// case ^Ident:
 		// 	fmt.printf("In Ident %s\n", t.value)
 		// case ^Prefix_Expr:
 		// 	fmt.println("In Prefix_Expr")
 		// 	free(t.right)
-		// case ^Int_Literal: return int_literal_string(v)
+		// case ^Int_Literal:
+		// 	fmt.printf("----------- Int_Literaln\n")
+
+		// return int_literal_string(v)
 		// case ^Block_Stmt:
 		// 	fmt.printf("In Block_Stmt")
 		// return block_stmt_string(v)
@@ -196,6 +198,7 @@ delete_program :: proc(program: ^Program) {
 }
 
 free_expr_stmt :: proc(expr: ^Expr) {
+	// fmt.println(expr.expr_base.derived)
 	#partial switch t in expr.expr_base.derived {
 	case ^Prefix_Expr:
 		free_expr_stmt(t.right)
@@ -249,6 +252,11 @@ free_expr_stmt :: proc(expr: ^Expr) {
 		}
 		delete(t.arguments)
 		free(t)
+	// case ^Let_Stmt:
+	// 	fmt.println(">>>>>> In Let_Stmt")
+	// 	free_expr_stmt(t.name)
+	// 	free_expr_stmt(t.value)
+	// 	free(t)
 	// case ^Expr_Stmt:
 	// 	fmt.printf("Expr_Stmt\n")
 	// case ^Bool_Literal:
@@ -256,7 +264,7 @@ free_expr_stmt :: proc(expr: ^Expr) {
 	// case ^Block_Stmt:
 	// 	fmt.println("In Block_Stmt")
 	// case:
-	// 	fmt.println(t)
+	// 	fmt.println("------------", t)
 	}
 }
 

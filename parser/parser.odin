@@ -106,7 +106,7 @@ next_token :: proc(p: ^Parser) {
 
 parse_program :: proc(p: ^Parser) -> ^ast.Program {
 	program := ast.new_node(ast.Program)
-	program.statements = make([dynamic]^ast.Stmt)
+	// program.statements = make([dynamic]^ast.Stmt)
 
 	for p.cur_token.type != lexer.EOF {
 		stmt := parse_statement(p)
@@ -123,6 +123,13 @@ parse_statement :: proc(p: ^Parser) -> ^ast.Stmt {
 	switch p.cur_token.type {
 	case lexer.LET:
 		return parse_let_stmt(p)
+	// case lexer.LET:
+	// v:= parse_let_stmt(p)
+	// if v != nil {
+	// return v
+	// } else {
+	// 	return nil
+	// }
 	case lexer.RETURN:
 		return parse_return_stmt(p)
 	case:
@@ -143,6 +150,8 @@ parse_let_stmt :: proc(p: ^Parser) -> ^ast.Stmt {
 	stmt.name.value = p.cur_token.literal
 
 	if !expect_peek(p, lexer.ASSIGN) {
+		free(stmt.name)
+		free(stmt)
 		return nil
 	}
 

@@ -8,7 +8,6 @@ import "repl"
 
 main :: proc() {
 
-
 	when ODIN_DEBUG {
 		track: mem.Tracking_Allocator
 		mem.tracking_allocator_init(&track, context.allocator)
@@ -19,6 +18,7 @@ main :: proc() {
 				fmt.eprintf("=== %v allocations not freed: ===\n", len(track.allocation_map))
 				for _, entry in track.allocation_map {
 					fmt.eprintf("- %v bytes @ %v\n", entry.size, entry.location)
+					fmt.eprintf("%p\n", entry.memory)
 				}
 			}
 			if len(track.bad_free_array) > 0 {
@@ -32,7 +32,8 @@ main :: proc() {
 	}
 
 	stdin := os.stream_from_handle(os.stdin)
+	stdout := os.stream_from_handle(os.stdout)
 
-	repl.start(stdin)
+	repl.start(stdin, stdout)
 
 }
