@@ -141,9 +141,9 @@ new_node :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived")
 	node := new(T)
 	node.derived = node
 
-	fmt.printf("1. Node: %v\n", node)
-	fmt.printf("2. Pointer: %p\n", node)
-	fmt.println()
+	// fmt.printf("1. Node: %v\n", node)
+	// fmt.printf("2. Pointer: %p\n", node)
+	// fmt.println()
 
 	return node
 }

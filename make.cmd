@@ -29,8 +29,9 @@ goto :EOF
 
 :TEST_ALL
   REM odin test lexer -debug
-  odin test parser -debug
+  REM odin test parser -debug
   REM odin test ast -debug
+  odin test evaluator -debug
 goto :EOF
 
 REM vim: foldmethod=marker ft=dosbatch fenc=cp932 ff=dos
