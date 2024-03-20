@@ -26,6 +26,10 @@ eval :: proc(node: ast.Node) -> ^object.Object {
 	case ^ast.Prefix_Expr:
 		right := eval(v.right)
 		return eval_prefix_expr(v.operator, right)
+	case ^ast.Infix_Expr:
+		left := eval(v.left)
+		right := eval(v.right)
+		return eval_infix_expr(v.operator, left, right)
 	case:
 		panic("eval: unknown node type")
 	}
@@ -95,5 +99,59 @@ eval_minus_prefix_operator_expr :: proc(right: ^object.Object) -> ^object.Object
 	obj := object.new_object(object.Integer)
 	obj.value = -value
 
+	return obj
+}
+
+eval_infix_expr :: proc(
+	operator: string,
+	left: ^object.Object,
+	right: ^object.Object,
+) -> ^object.Object {
+	switch {
+	case object.type(left) == object.INTEGER_OBJ && object.type(right) == object.INTEGER_OBJ:
+		return eval_integer_infix_expr(operator, left, right)
+	case operator == "==":
+		return native_bool_to_boolean_object(left == right)
+	case operator == "!=":
+		return native_bool_to_boolean_object(left != right)
+	case:
+		return NULL
+	}
+}
+
+eval_integer_infix_expr :: proc(
+	operator: string,
+	left: ^object.Object,
+	right: ^object.Object,
+) -> ^object.Object {
+	lvalue := left.derived.(^object.Integer).value
+	rvalue := right.derived.(^object.Integer).value
+	obj: ^object.Object
+	switch operator {
+	case "+":
+		obj = object.new_object(object.Integer)
+		obj.derived.(^object.Integer).value = lvalue + rvalue
+	case "-":
+		obj = object.new_object(object.Integer)
+		obj.derived.(^object.Integer).value = lvalue - rvalue
+	case "*":
+		obj = object.new_object(object.Integer)
+		obj.derived.(^object.Integer).value = lvalue * rvalue
+	case "/":
+		obj = object.new_object(object.Integer)
+		obj.derived.(^object.Integer).value = lvalue / rvalue
+	case "<":
+		obj = native_bool_to_boolean_object(lvalue < rvalue)
+	case ">":
+		obj = native_bool_to_boolean_object(lvalue > rvalue)
+	case "==":
+		obj = native_bool_to_boolean_object(lvalue == rvalue)
+	case "!=":
+		obj = native_bool_to_boolean_object(lvalue != rvalue)
+	case:
+		return NULL
+	}
+	free(left)
+	free(right)
 	return obj
 }

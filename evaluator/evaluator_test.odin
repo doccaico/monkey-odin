@@ -38,7 +38,7 @@ test_integer_object :: proc(t: ^testing.T, obj: ^object.Object, expected: i64) -
 test_boolean_object :: proc(t: ^testing.T, obj: ^object.Object, expected: bool) -> bool {
 	result, ok := obj.derived.(^object.Boolean)
 	if !ok {
-		testing.errorf(t, "object is not Boolean. got=%T (%+v)", obj, obj)
+		testing.errorf(t, "object is not Boolean. got=%T (%v)", obj, obj.derived)
 		return false
 	}
 	if result.value != expected {
@@ -54,7 +54,23 @@ test_eval_integer_expr :: proc(t: ^testing.T) {
 	tests := []struct {
 		input:    string,
 		expected: i64,
-	}{{"5", 5}, {"10", 10}, {"-5", -5}, {"-10", -10}}
+	} {
+		{"5", 5},
+		{"10", 10},
+		{"-5", -5},
+		{"-10", -10},
+		{"5 + 5 + 5 + 5 - 10", 10},
+		{"2 * 2 * 2 * 2 * 2", 32},
+		{"-50 + 100 + -50", 0},
+		{"5 * 2 + 10", 20},
+		{"5 + 2 * 10", 25},
+		{"20 + 2 * -10", 0},
+		{"50 / 2 * 2 + 10", 60},
+		{"2 * (5 + 10)", 30},
+		{"3 * 3 * 3 + 10", 37},
+		{"3 * (3 * 3) + 10", 37},
+		{"(5 + 10 * 2 + 15 / 3) * 2 + -10", 50},
+	}
 
 	for tt in tests {
 		evaluated := test_eval(tt.input)
@@ -67,7 +83,27 @@ test_eval_boolean_expr :: proc(t: ^testing.T) {
 	tests := []struct {
 		input:    string,
 		expected: bool,
-	}{{"true", true}, {"false", false}}
+	} {
+		{"true", true},
+		{"false", false},
+		{"1 < 2", true},
+		{"1 > 2", false},
+		{"1 < 1", false},
+		{"1 > 1", false},
+		{"1 == 1", true},
+		{"1 != 1", false},
+		{"1 == 2", false},
+		{"1 != 2", true},
+		{"true == true", true},
+		{"false == false", true},
+		{"true == false", false},
+		{"true != false", true},
+		{"false != true", true},
+		{"(1 < 2) == true", true},
+		{"(1 < 2) == false", false},
+		{"(1 > 2) == true", false},
+		{"(1 > 2) == false", true},
+	}
 
 	for tt in tests {
 		evaluated := test_eval(tt.input)
@@ -132,6 +168,6 @@ test_parser_main :: proc(t: ^testing.T) {
 	defer delete_eval()
 
 	run_test(t, "[RUN] test_eval_integer_expr", test_eval_integer_expr)
-	// run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
-	// run_test(t, "[RUN] test_bang_operator", test_bang_operator)
+	run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
+	run_test(t, "[RUN] test_bang_operator", test_bang_operator)
 }
