@@ -14,7 +14,7 @@ NULL: ^object.Null
 eval :: proc(node: ast.Node) -> ^object.Object {
 	#partial switch v in node.derived {
 	case ^ast.Program:
-		return eval_stmts(v.statements)
+		return eval_program(v)
 	case ^ast.Expr_Stmt:
 		return eval(v.expr)
 	case ^ast.Int_Literal:
@@ -31,20 +31,49 @@ eval :: proc(node: ast.Node) -> ^object.Object {
 		right := eval(v.right)
 		return eval_infix_expr(v.operator, left, right)
 	case ^ast.Block_Stmt:
-		return eval_stmts(v.statements)
+		return eval_block_stmt(v)
 	case ^ast.If_Expr:
 		return eval_if_expr(v)
+	case ^ast.Return_Stmt:
+		value := eval(v.return_value)
+		obj := object.new_object(object.Return_Value)
+		obj.value = value
+		return obj
 	case:
 		panic("eval: unknown node type")
 	}
 	return nil
 }
 
-eval_stmts :: proc(stmts: [dynamic]^ast.Stmt) -> ^object.Object {
+eval_program :: proc(program: ^ast.Program) -> ^object.Object {
 	result: ^object.Object
 
-	for stmt in stmts {
+	for stmt in program.statements {
 		result = eval(stmt)
+
+		#partial switch v in result.derived {
+		case ^object.Integer:
+			object.delete_object(v)
+		case ^object.Return_Value:
+			ret := v.value
+			object.delete_object(v.value)
+			object.delete_object(v)
+			return ret
+		}
+	}
+
+	return result
+}
+
+eval_block_stmt :: proc(block: ^ast.Block_Stmt) -> ^object.Object {
+	result: ^object.Object
+
+	for stmt in block.statements {
+		result = eval(stmt)
+
+		if result != nil && object.type(result) == object.RETURN_VALUE_OBJ {
+			return result
+		}
 	}
 
 	return result

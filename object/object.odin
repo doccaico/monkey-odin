@@ -6,13 +6,14 @@ import "core:intrinsics"
 INTEGER_OBJ :: "INTEGER"
 BOOLEAN_OBJ :: "BOOLEAN"
 NULL_OBJ :: "NULL"
+RETURN_VALUE_OBJ :: "RETURN_VALUE"
 
 Any_Obj :: union {
 	^Integer,
 	^Boolean,
 	^Null,
+	^Return_Value,
 	// ^String,
-	// ^Return_Value,
 	// ^Error,
 	// ^Function,
 	// ^Builtin,
@@ -38,6 +39,11 @@ Boolean :: struct {
 
 Null :: struct {
 	using obj: Object,
+}
+
+Return_Value :: struct {
+	using obj: Object,
+	value:     ^Object,
 }
 
 
@@ -70,6 +76,8 @@ delete_object :: proc(obj: ^Object) {
 		break
 	case ^Integer:
 		free(v)
+	case ^Return_Value:
+		free(v)
 	case:
 		panic("delete_object: unknown object type")
 	}
@@ -83,6 +91,8 @@ type :: proc(obj: ^Object) -> ObjectType {
 		return boolean_type(v)
 	case ^Null:
 		return null_type(v)
+	case ^Return_Value:
+		return return_value_type(v)
 	case:
 		panic("type: unknown object type")
 	}
@@ -100,6 +110,10 @@ null_type :: proc(obj: ^Null) -> ObjectType {
 	return NULL_OBJ
 }
 
+return_value_type :: proc(obj: ^Return_Value) -> ObjectType {
+	return RETURN_VALUE_OBJ
+}
+
 inspect :: proc(obj: ^Object) -> string {
 	switch v in obj.derived {
 	case ^Integer:
@@ -108,6 +122,8 @@ inspect :: proc(obj: ^Object) -> string {
 		return boolean_inspect(v)
 	case ^Null:
 		return null_inspect(v)
+	case ^Return_Value:
+		return return_value_inspect(v)
 	case:
 		panic("inspect: unknown object type")
 	}
@@ -123,4 +139,8 @@ boolean_inspect :: proc(obj: ^Boolean) -> string {
 
 null_inspect :: proc(obj: ^Null) -> string {
 	return "null"
+}
+
+return_value_inspect :: proc(obj: ^Return_Value) -> string {
+	return inspect(obj.value)
 }

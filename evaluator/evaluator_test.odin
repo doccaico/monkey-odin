@@ -86,7 +86,6 @@ test_eval_integer_expr :: proc(t: ^testing.T) {
 
 	for tt in tests {
 		evaluated := test_eval(tt.input)
-		defer object.delete_object(evaluated)
 		test_integer_object(t, evaluated, tt.expected)
 	}
 }
@@ -119,7 +118,6 @@ test_eval_boolean_expr :: proc(t: ^testing.T) {
 
 	for tt in tests {
 		evaluated := test_eval(tt.input)
-		defer object.delete_object(evaluated)
 		test_boolean_object(t, evaluated, tt.expected)
 	}
 }
@@ -140,7 +138,6 @@ test_bang_operator :: proc(t: ^testing.T) {
 
 	for tt in tests {
 		evaluated := test_eval(tt.input)
-		defer object.delete_object(evaluated)
 		test_boolean_object(t, evaluated, tt.expected)
 	}
 }
@@ -160,13 +157,38 @@ test_if_else_expr :: proc(t: ^testing.T) {
 	}
 	for tt in tests {
 		evaluated := test_eval(tt.input)
-		defer object.delete_object(evaluated)
 		switch e in tt.expected {
 		case i64:
 			test_integer_object(t, evaluated, tt.expected.(i64))
 		case:
 			test_null_object(t, evaluated)
 		}
+	}
+}
+
+test_return_stmts :: proc(t: ^testing.T) {
+	tests := []struct {
+		input:    string,
+		expected: i64,
+	} {
+		{"return 10;", 10},
+		{"return 10; 9;", 10},
+		{"return 2 * 5; 9;", 10},
+		{"9; return 2 * 5; 9;", 10},
+		{`
+		if (10 > 1) {
+		  if (10 > 1) {
+		    return 10;
+		  }
+
+		  return 1;
+		}
+		`, 10},
+	}
+
+	for tt in tests {
+		evaluated := test_eval(tt.input)
+		test_integer_object(t, evaluated, tt.expected)
 	}
 }
 
@@ -188,7 +210,7 @@ test_parser_main :: proc(t: ^testing.T) {
 				fmt.eprintf("=== %v allocations not freed: ===\n", len(track.allocation_map))
 				for _, entry in track.allocation_map {
 					fmt.eprintf("- %v bytes @ %v\n", entry.size, entry.location)
-					fmt.eprintf("%p\n", entry.memory)
+					// fmt.eprintf("%p\n", entry.memory)
 				}
 			}
 			if len(track.bad_free_array) > 0 {
@@ -208,4 +230,5 @@ test_parser_main :: proc(t: ^testing.T) {
 	run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
 	run_test(t, "[RUN] test_bang_operator", test_bang_operator)
 	run_test(t, "[RUN] test_if_else_expr", test_if_else_expr)
+	run_test(t, "[RUN] test_return_stmts", test_return_stmts)
 }

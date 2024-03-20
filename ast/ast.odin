@@ -151,7 +151,8 @@ new_node :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived")
 delete_program :: proc(program: ^Program) {
 	// fmt.println("In [Fn] delete_program")
 	for stmt in program.statements {
-		#partial switch t in stmt.expr_base.derived {
+		// #partial switch t in stmt.expr_base.derived {
+		#partial switch t in stmt.derived {
 		// case ^Program:
 		// 	fmt.println("In Program")
 		case ^Expr_Stmt:
@@ -211,7 +212,12 @@ free_expr_stmt :: proc(expr: ^Expr) {
 		free_expr_stmt(t.condition)
 
 		for stmt in t.consequence.statements {
-			free(stmt.derived.(^Expr_Stmt).expr)
+			#partial switch t in stmt.derived {
+			case ^Expr_Stmt:
+				free_expr_stmt(t.expr)
+			case ^Return_Stmt:
+				free(t.return_value)
+			}
 			free(stmt)
 		}
 		delete(t.consequence.statements)
@@ -219,7 +225,12 @@ free_expr_stmt :: proc(expr: ^Expr) {
 
 		if t.alternative != nil {
 			for stmt in t.alternative.statements {
-				free(stmt.derived.(^Expr_Stmt).expr)
+				#partial switch t in stmt.derived {
+				case ^Expr_Stmt:
+					free_expr_stmt(t.expr)
+				case ^Return_Stmt:
+					free(t.return_value)
+				}
 				free(stmt)
 			}
 			delete(t.alternative.statements)
@@ -265,6 +276,8 @@ free_expr_stmt :: proc(expr: ^Expr) {
 	// 	fmt.println("In Block_Stmt")
 	// case:
 	// 	fmt.println("------------", t)
+	case:
+		panic("free_expr_stmt: unknown expr type")
 	}
 }
 
