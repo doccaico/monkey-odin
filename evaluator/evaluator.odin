@@ -1,13 +1,14 @@
 package evaluator
 
-// import "core:bytes"
 import "core:fmt"
+// import "core:bytes"
 // import "core:mem"
-import "core:testing"
 
 import "../ast"
 import "../object"
-// import "../parser"
+
+TRUE: ^object.Boolean
+FALSE: ^object.Boolean
 
 eval :: proc(node: ast.Node) -> ^object.Object {
 	#partial switch v in node.derived {
@@ -18,8 +19,9 @@ eval :: proc(node: ast.Node) -> ^object.Object {
 	case ^ast.Int_Literal:
 		obj := object.new_object(object.Integer)
 		obj.value = v.value
-		// fmt.printf("%p\n", obj)
 		return obj
+	case ^ast.Bool_Literal:
+		return native_bool_to_boolean_object(v.value)
 	case:
 		panic("eval: unknown node type")
 	}
@@ -35,4 +37,18 @@ eval_stmts :: proc(stmts: [dynamic]^ast.Stmt) -> ^object.Object {
 	}
 
 	return result
+}
+
+native_bool_to_boolean_object :: proc(input: bool) -> ^object.Boolean {
+	return (input) ? TRUE : FALSE
+}
+
+new_eval :: proc() {
+	TRUE = object.new_object_boolean(true)
+	FALSE = object.new_object_boolean(false)
+}
+
+delete_eval :: proc() {
+	free(TRUE)
+	free(FALSE)
 }

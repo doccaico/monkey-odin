@@ -52,8 +52,22 @@ new_object :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived
 	return obj
 }
 
+new_object_boolean :: proc(b: bool) -> ^Boolean {
+	obj := new(Boolean)
+	obj.derived = obj
+	obj.value = b
+
+	// fmt.printf("1. Object: %v\n", obj)
+	// fmt.printf("2. Pointer: %p\n", obj)
+	// fmt.println()
+
+	return obj
+}
+
 delete_object :: proc(obj: ^Object) {
 	#partial switch v in obj.derived {
+	case ^Boolean:
+		break
 	case ^Integer:
 		free(v)
 	case:

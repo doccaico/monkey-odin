@@ -18,6 +18,9 @@ start :: proc(stdin: io.Stream, stdout: io.Stream) {
 	bufio.scanner_init(&scanner, stdin)
 	defer bufio.scanner_destroy(&scanner)
 
+	evaluator.new_eval()
+	defer evaluator.delete_eval()
+
 	for {
 		io.write_string(stdout, PROMPT)
 
