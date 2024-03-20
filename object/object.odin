@@ -9,6 +9,8 @@ NULL_OBJ :: "NULL"
 RETURN_VALUE_OBJ :: "RETURN_VALUE"
 ERROR_OBJ :: "ERROR"
 
+object_array: [dynamic]^Object
+
 Any_Obj :: union {
 	^Integer,
 	^Boolean,
@@ -56,9 +58,11 @@ new_object :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived
 	obj := new(T)
 	obj.derived = obj
 
-	fmt.printf("1. Object: %v\n", obj)
-	fmt.printf("2. Pointer: %p\n", obj)
-	fmt.println()
+	// fmt.printf("1. Object: %v\n", obj)
+	// fmt.printf("2. Pointer: %p\n", obj)
+	// fmt.println()
+
+	add_object(obj)
 
 	return obj
 }
@@ -75,19 +79,30 @@ new_object_boolean :: proc(b: bool) -> ^Boolean {
 	return obj
 }
 
-delete_object :: proc(obj: ^Object) {
-	#partial switch v in obj.derived {
-	case ^Boolean, ^Null:
-		break
-	case ^Integer:
-		free(v)
-	case ^Return_Value:
-		free(v)
-	case ^Error:
-		free(v)
-	case:
-		panic("delete_object: unknown object type")
+new_object_null :: proc() -> ^Null {
+	obj := new(Null)
+	obj.derived = obj
+
+	return obj
+}
+
+delete_object :: proc() {
+	for obj in object_array {
+		#partial switch v in obj.derived {
+		case ^Integer:
+			free(v)
+		case ^Return_Value:
+			free(v)
+		case ^Error:
+			free(v)
+		case:
+			panic("delete_object: unknown object type")
+		}
 	}
+}
+
+add_object :: proc(obj: ^Object) {
+	append(&object_array, obj)
 }
 
 type :: proc(obj: ^Object) -> ObjectType {

@@ -73,17 +73,10 @@ eval_program :: proc(program: ^ast.Program, env: ^object.Environment) -> ^object
 		result = eval(stmt, env)
 
 		#partial switch v in result.derived {
-		case ^object.Integer:
-			object.delete_object(v)
 		case ^object.Return_Value:
-			ret := v.value
-			object.delete_object(v.value)
-			object.delete_object(v)
-			return ret
+			return v.value
 		case ^object.Error:
-			ret := result
-			object.delete_object(v)
-			return ret
+			return v
 		}
 	}
 
@@ -120,19 +113,24 @@ new_error :: proc(format: string, args: ..any) -> ^object.Error {
 	// fmt.printf("2. Pointer: %p\n", obj)
 	// fmt.println()
 
+	object.add_object(obj)
+
 	return obj
 }
 
 new_eval :: proc() {
 	TRUE = object.new_object_boolean(true)
 	FALSE = object.new_object_boolean(false)
-	NULL = object.new_object(object.Null)
+	NULL = object.new_object_null()
 }
 
 delete_eval :: proc() {
 	free(TRUE)
 	free(FALSE)
 	free(NULL)
+
+	object.delete_object()
+	delete(object.object_array)
 }
 
 eval_prefix_expr :: proc(operator: string, right: ^object.Object) -> ^object.Object {
@@ -155,19 +153,17 @@ eval_bang_operator_expr :: proc(right: ^object.Object) -> ^object.Object {
 	case NULL:
 		return TRUE
 	case:
-		free(right) // バグりそうな予感
+		// free(right) // バグりそうな予感
 		return FALSE
 	}
 }
 
 eval_minus_prefix_operator_expr :: proc(right: ^object.Object) -> ^object.Object {
 	if object.type(right) != object.INTEGER_OBJ {
-		object.delete_object(right) // バグりそうな予感
 		return new_error("unknown operator: -%s", object.type(right))
 	}
 
 	value := right.derived.(^object.Integer).value
-	free(right) // バグりそうな予感
 
 	obj := object.new_object(object.Integer)
 	obj.value = -value
@@ -188,8 +184,6 @@ eval_infix_expr :: proc(
 	case operator == "!=":
 		return native_bool_to_boolean_object(left != right)
 	case object.type(left) != object.type(right):
-		object.delete_object(left)
-		object.delete_object(right)
 		return new_error(
 			"type mismatch: %s %s %s",
 			object.type(left),
@@ -243,12 +237,12 @@ eval_integer_infix_expr :: proc(
 			object.type(right),
 		)
 	}
-	if right == left {
-		free(left)
-	} else {
-		free(left)
-		free(right)
-	}
+	// if right == left {
+	// 	free(left)
+	// } else {
+	// 	free(left)
+	// 	free(right)
+	// }
 	return obj
 }
 
@@ -284,7 +278,6 @@ is_truthy :: proc(obj: ^object.Object) -> bool {
 	case FALSE:
 		return false
 	case:
-		object.delete_object(obj)
 		return true
 	}
 }

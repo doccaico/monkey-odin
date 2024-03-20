@@ -251,16 +251,17 @@ test_let_stmts :: proc(t: ^testing.T) {
 		input:    string,
 		expected: i64,
 	} {
-		// {"let a = 5; a;", 5},
-		// {"let a = 5 * 5; a;", 25},
-		// {"let a = 5; let b = a; b;", 5},
-		// {"let a = 5; let b = a; let c = a + b + 5; c;", 15},
+		{"let a = 5; a;", 5},
+		{"let a = 5 * 6; a;", 30},
+		{"let a = 5; let b = a; b;", 5},
 		{"let a = 5; let b = a; let c = a + b + 5; c;", 15},
-		// {"let a = 9999; let b = 1; let c = a + b; c; c;", 10000},
+		{"let a = 9; let b = 1; let c = a + b; a; b; c;", 10},
 	}
 
 	for tt in tests {
-		test_integer_object(t, test_eval(tt.input), tt.expected)
+		evaluated := test_eval(tt.input)
+		// defer object.delete_object()
+		test_integer_object(t, evaluated, tt.expected)
 	}
 }
 
@@ -298,11 +299,11 @@ test_evaluator_main :: proc(t: ^testing.T) {
 	new_eval()
 	defer delete_eval()
 
-	// run_test(t, "[RUN] test_eval_integer_expr", test_eval_integer_expr)
-	// run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
-	// run_test(t, "[RUN] test_bang_operator", test_bang_operator)
-	// run_test(t, "[RUN] test_if_else_expr", test_if_else_expr)
-	// run_test(t, "[RUN] test_return_stmts", test_return_stmts)
-	// run_test(t, "[RUN] test_error_handling", test_error_handling)
+	run_test(t, "[RUN] test_eval_integer_expr", test_eval_integer_expr)
+	run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
+	run_test(t, "[RUN] test_bang_operator", test_bang_operator)
+	run_test(t, "[RUN] test_if_else_expr", test_if_else_expr)
+	run_test(t, "[RUN] test_return_stmts", test_return_stmts)
+	run_test(t, "[RUN] test_error_handling", test_error_handling)
 	run_test(t, "[RUN] test_let_stmts", test_let_stmts)
 }

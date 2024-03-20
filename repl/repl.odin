@@ -58,6 +58,7 @@ start :: proc(stdin: io.Stream, stdout: io.Stream) {
 		// io.write_rune(stdout, '\n')
 
 		evaluated := evaluator.eval(program, env)
+		defer object.delete_object()
 		// defer object.delete_object(evaluated)
 		if evaluated != evaluator.NULL {
 			io.write_string(stdout, object.inspect(evaluated))
