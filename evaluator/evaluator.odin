@@ -9,6 +9,7 @@ import "../object"
 
 TRUE: ^object.Boolean
 FALSE: ^object.Boolean
+NULL: ^object.Null
 
 eval :: proc(node: ast.Node) -> ^object.Object {
 	#partial switch v in node.derived {
@@ -46,9 +47,11 @@ native_bool_to_boolean_object :: proc(input: bool) -> ^object.Boolean {
 new_eval :: proc() {
 	TRUE = object.new_object_boolean(true)
 	FALSE = object.new_object_boolean(false)
+	NULL = object.new_object(object.Null)
 }
 
 delete_eval :: proc() {
 	free(TRUE)
 	free(FALSE)
+	free(NULL)
 }
