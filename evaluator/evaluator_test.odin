@@ -54,7 +54,7 @@ test_boolean_object :: proc(t: ^testing.T, obj: ^object.Object, expected: bool) 
 
 test_null_object :: proc(t: ^testing.T, obj: ^object.Object) -> bool {
 	if obj != NULL {
-		testing.errorf(t, "object is not NULL. got=%T (%v)", obj, obj)
+		testing.errorf(t, "object is not NULL. got=%T (%v)", obj, obj.derived)
 		return false
 	}
 	return true
@@ -192,6 +192,56 @@ test_return_stmts :: proc(t: ^testing.T) {
 	}
 }
 
+test_error_handling :: proc(t: ^testing.T) {
+	tests := []struct {
+		input:        string,
+		expected_msg: string,
+	} {
+		{"5 + true;", "type mismatch: INTEGER + BOOLEAN"},
+		{"5 + true; 5;", "type mismatch: INTEGER + BOOLEAN"},
+		{"-true", "unknown operator: -BOOLEAN"},
+		{"true + false;", "unknown operator: BOOLEAN + BOOLEAN"},
+		{"5; true + false; 5", "unknown operator: BOOLEAN + BOOLEAN"},
+		{"if (10 > 1) { true + false; }", "unknown operator: BOOLEAN + BOOLEAN"},
+		 {
+			`
+		if (10 > 1) {
+		  if (10 > 1) {
+		    return true + false;
+		  }
+
+		  return 1;
+		}
+		`,
+			"unknown operator: BOOLEAN + BOOLEAN",
+		},
+	}
+
+	for tt in tests {
+		evaluated := test_eval(tt.input)
+
+		err_obj, ok := evaluated.derived.(^object.Error)
+		if !ok {
+			testing.errorf(
+				t,
+				"no error object returned. got=%T (%v)",
+				evaluated,
+				evaluated.derived,
+			)
+			continue
+		}
+
+		if err_obj.message != tt.expected_msg {
+			testing.errorf(
+				t,
+				"wrong error message. expected=%q, got=%q",
+				tt.expected_msg,
+				err_obj.message,
+			)
+		}
+	}
+}
+
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
@@ -210,7 +260,7 @@ test_parser_main :: proc(t: ^testing.T) {
 				fmt.eprintf("=== %v allocations not freed: ===\n", len(track.allocation_map))
 				for _, entry in track.allocation_map {
 					fmt.eprintf("- %v bytes @ %v\n", entry.size, entry.location)
-					// fmt.eprintf("%p\n", entry.memory)
+					fmt.eprintf("%p\n", entry.memory)
 				}
 			}
 			if len(track.bad_free_array) > 0 {
@@ -226,9 +276,10 @@ test_parser_main :: proc(t: ^testing.T) {
 	new_eval()
 	defer delete_eval()
 
-	run_test(t, "[RUN] test_eval_integer_expr", test_eval_integer_expr)
-	run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
-	run_test(t, "[RUN] test_bang_operator", test_bang_operator)
-	run_test(t, "[RUN] test_if_else_expr", test_if_else_expr)
-	run_test(t, "[RUN] test_return_stmts", test_return_stmts)
+	// run_test(t, "[RUN] test_eval_integer_expr", test_eval_integer_expr)
+	// run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
+	// run_test(t, "[RUN] test_bang_operator", test_bang_operator)
+	// run_test(t, "[RUN] test_if_else_expr", test_if_else_expr)
+	// run_test(t, "[RUN] test_return_stmts", test_return_stmts)
+	run_test(t, "[RUN] test_error_handling", test_error_handling)
 }

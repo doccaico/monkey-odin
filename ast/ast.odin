@@ -216,7 +216,7 @@ free_expr_stmt :: proc(expr: ^Expr) {
 			case ^Expr_Stmt:
 				free_expr_stmt(t.expr)
 			case ^Return_Stmt:
-				free(t.return_value)
+				free_expr_stmt(t.return_value)
 			}
 			free(stmt)
 		}
@@ -229,7 +229,7 @@ free_expr_stmt :: proc(expr: ^Expr) {
 				case ^Expr_Stmt:
 					free_expr_stmt(t.expr)
 				case ^Return_Stmt:
-					free(t.return_value)
+					free_expr_stmt(t.return_value)
 				}
 				free(stmt)
 			}

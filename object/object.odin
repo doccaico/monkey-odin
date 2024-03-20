@@ -7,14 +7,15 @@ INTEGER_OBJ :: "INTEGER"
 BOOLEAN_OBJ :: "BOOLEAN"
 NULL_OBJ :: "NULL"
 RETURN_VALUE_OBJ :: "RETURN_VALUE"
+ERROR_OBJ :: "ERROR"
 
 Any_Obj :: union {
 	^Integer,
 	^Boolean,
 	^Null,
 	^Return_Value,
+	^Error,
 	// ^String,
-	// ^Error,
 	// ^Function,
 	// ^Builtin,
 	// ^Array,
@@ -46,6 +47,10 @@ Return_Value :: struct {
 	value:     ^Object,
 }
 
+Error :: struct {
+	using obj: Object,
+	message:   string,
+}
 
 new_object :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
 	obj := new(T)
@@ -78,6 +83,8 @@ delete_object :: proc(obj: ^Object) {
 		free(v)
 	case ^Return_Value:
 		free(v)
+	case ^Error:
+		free(v)
 	case:
 		panic("delete_object: unknown object type")
 	}
@@ -93,6 +100,8 @@ type :: proc(obj: ^Object) -> ObjectType {
 		return null_type(v)
 	case ^Return_Value:
 		return return_value_type(v)
+	case ^Error:
+		return error_type(v)
 	case:
 		panic("type: unknown object type")
 	}
@@ -114,6 +123,10 @@ return_value_type :: proc(obj: ^Return_Value) -> ObjectType {
 	return RETURN_VALUE_OBJ
 }
 
+error_type :: proc(obj: ^Error) -> ObjectType {
+	return ERROR_OBJ
+}
+
 inspect :: proc(obj: ^Object) -> string {
 	switch v in obj.derived {
 	case ^Integer:
@@ -124,6 +137,8 @@ inspect :: proc(obj: ^Object) -> string {
 		return null_inspect(v)
 	case ^Return_Value:
 		return return_value_inspect(v)
+	case ^Error:
+		return error_inspect(v)
 	case:
 		panic("inspect: unknown object type")
 	}
@@ -143,4 +158,8 @@ null_inspect :: proc(obj: ^Null) -> string {
 
 return_value_inspect :: proc(obj: ^Return_Value) -> string {
 	return inspect(obj.value)
+}
+
+error_inspect :: proc(obj: ^Error) -> string {
+	return fmt.tprintf("ERROR: %s", obj.message)
 }
