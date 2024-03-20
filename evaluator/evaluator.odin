@@ -30,6 +30,10 @@ eval :: proc(node: ast.Node) -> ^object.Object {
 		left := eval(v.left)
 		right := eval(v.right)
 		return eval_infix_expr(v.operator, left, right)
+	case ^ast.Block_Stmt:
+		return eval_stmts(v.statements)
+	case ^ast.If_Expr:
+		return eval_if_expr(v)
 	case:
 		panic("eval: unknown node type")
 	}
@@ -154,4 +158,29 @@ eval_integer_infix_expr :: proc(
 	free(left)
 	free(right)
 	return obj
+}
+
+eval_if_expr :: proc(e: ^ast.If_Expr) -> ^object.Object {
+	condition := eval(e.condition)
+	if is_truthy(condition) {
+		return eval(e.consequence)
+	} else if e.alternative != nil {
+		return eval(e.alternative)
+	} else {
+		return NULL
+	}
+}
+
+is_truthy :: proc(obj: ^object.Object) -> bool {
+	switch obj {
+	case NULL:
+		return false
+	case TRUE:
+		return true
+	case FALSE:
+		return false
+	case:
+		object.delete_object(obj)
+		return true
+	}
 }

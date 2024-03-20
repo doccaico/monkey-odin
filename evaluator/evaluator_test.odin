@@ -9,6 +9,10 @@ import "../lexer"
 import "../object"
 import "../parser"
 
+Types1 :: union {
+	i64,
+}
+
 test_eval :: proc(input: string) -> ^object.Object {
 	l := lexer.new_lexer(input)
 	defer lexer.delete_lexer(l)
@@ -25,7 +29,7 @@ test_eval :: proc(input: string) -> ^object.Object {
 test_integer_object :: proc(t: ^testing.T, obj: ^object.Object, expected: i64) -> bool {
 	result, ok := obj.derived.(^object.Integer)
 	if !ok {
-		testing.errorf(t, "object is not Integer. got=%T (%+v)", obj, obj)
+		testing.errorf(t, "object is not Integer. got=%T (%v)", obj, obj.derived)
 		return false
 	}
 	if result.value != expected {
@@ -43,6 +47,14 @@ test_boolean_object :: proc(t: ^testing.T, obj: ^object.Object, expected: bool) 
 	}
 	if result.value != expected {
 		testing.errorf(t, "object has wrong value. got=%t, want=%t", result.value, expected)
+		return false
+	}
+	return true
+}
+
+test_null_object :: proc(t: ^testing.T, obj: ^object.Object) -> bool {
+	if obj != NULL {
+		testing.errorf(t, "object is not NULL. got=%T (%v)", obj, obj)
 		return false
 	}
 	return true
@@ -133,6 +145,31 @@ test_bang_operator :: proc(t: ^testing.T) {
 	}
 }
 
+test_if_else_expr :: proc(t: ^testing.T) {
+	tests := []struct {
+		input:    string,
+		expected: Types1,
+	} {
+		{"if (true) { 10 }", 10},
+		{"if (false) { 10 }", nil},
+		{"if (1) { 10 }", 10},
+		{"if (1 < 2) { 10 }", 10},
+		{"if (1 > 2) { 10 }", nil},
+		{"if (1 > 2) { 10 } else { 20 }", 20},
+		{"if (1 < 2) { 10 } else { 20 }", 10},
+	}
+	for tt in tests {
+		evaluated := test_eval(tt.input)
+		defer object.delete_object(evaluated)
+		switch e in tt.expected {
+		case i64:
+			test_integer_object(t, evaluated, tt.expected.(i64))
+		case:
+			test_null_object(t, evaluated)
+		}
+	}
+}
+
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
@@ -151,7 +188,7 @@ test_parser_main :: proc(t: ^testing.T) {
 				fmt.eprintf("=== %v allocations not freed: ===\n", len(track.allocation_map))
 				for _, entry in track.allocation_map {
 					fmt.eprintf("- %v bytes @ %v\n", entry.size, entry.location)
-					// fmt.eprintf("%p\n", entry.memory)
+					fmt.eprintf("%p\n", entry.memory)
 				}
 			}
 			if len(track.bad_free_array) > 0 {
@@ -170,4 +207,5 @@ test_parser_main :: proc(t: ^testing.T) {
 	run_test(t, "[RUN] test_eval_integer_expr", test_eval_integer_expr)
 	run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
 	run_test(t, "[RUN] test_bang_operator", test_bang_operator)
+	run_test(t, "[RUN] test_if_else_expr", test_if_else_expr)
 }

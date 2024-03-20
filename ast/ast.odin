@@ -219,7 +219,7 @@ free_expr_stmt :: proc(expr: ^Expr) {
 
 		if t.alternative != nil {
 			for stmt in t.alternative.statements {
-				// free(stmt.derived.(^Expr_Stmt).expr)
+				free(stmt.derived.(^Expr_Stmt).expr)
 				free(stmt)
 			}
 			delete(t.alternative.statements)
