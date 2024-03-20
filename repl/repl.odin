@@ -1,11 +1,13 @@
 package repl
 
 import "core:bufio"
-import "core:bytes"
 import "core:io"
+// import "core:bytes"
 
 import "../ast"
+import "../evaluator"
 import "../lexer"
+import "../object"
 import "../parser"
 
 PROMPT :: ">> "
@@ -42,12 +44,20 @@ start :: proc(stdin: io.Stream, stdout: io.Stream) {
 			continue
 		}
 
-		buf := ast.to_string(program)
-		defer bytes.buffer_destroy(&buf)
-		s := bytes.buffer_to_string(&buf)
+		// buf := ast.to_string(program)
+		// defer bytes.buffer_destroy(&buf)
+		// s := bytes.buffer_to_string(&buf)
+		//
+		// io.write_string(stdout, s)
+		// io.write_rune(stdout, '\n')
 
-		io.write_string(stdout, s)
-		io.write_rune(stdout, '\n')
+		evaluated := evaluator.eval(program)
+		defer object.delete_object(evaluated)
+		if evaluated != nil {
+			io.write_string(stdout, object.inspect(evaluated))
+			io.write_rune(stdout, '\n')
+		}
+
 	}
 }
 

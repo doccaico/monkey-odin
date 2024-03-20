@@ -61,7 +61,7 @@ delete_object :: proc(obj: ^Object) {
 	}
 }
 
-type :: proc(obj: Object) -> ObjectType {
+type :: proc(obj: ^Object) -> ObjectType {
 	switch v in obj.derived {
 	case ^Integer:
 		return integer_type(v)
@@ -86,7 +86,7 @@ null_type :: proc(obj: ^Null) -> ObjectType {
 	return NULL_OBJ
 }
 
-inspect :: proc(obj: Object) -> string {
+inspect :: proc(obj: ^Object) -> string {
 	switch v in obj.derived {
 	case ^Integer:
 		return integer_inspect(v)
