@@ -66,7 +66,7 @@ new_object_boolean :: proc(b: bool) -> ^Boolean {
 
 delete_object :: proc(obj: ^Object) {
 	#partial switch v in obj.derived {
-	case ^Boolean:
+	case ^Boolean, ^Null:
 		break
 	case ^Integer:
 		free(v)

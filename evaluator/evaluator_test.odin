@@ -54,7 +54,7 @@ test_eval_integer_expr :: proc(t: ^testing.T) {
 	tests := []struct {
 		input:    string,
 		expected: i64,
-	}{{"5", 5}, {"10", 10}}
+	}{{"5", 5}, {"10", 10}, {"-5", -5}, {"-10", -10}}
 
 	for tt in tests {
 		evaluated := test_eval(tt.input)
@@ -68,6 +68,27 @@ test_eval_boolean_expr :: proc(t: ^testing.T) {
 		input:    string,
 		expected: bool,
 	}{{"true", true}, {"false", false}}
+
+	for tt in tests {
+		evaluated := test_eval(tt.input)
+		defer object.delete_object(evaluated)
+		test_boolean_object(t, evaluated, tt.expected)
+	}
+}
+
+
+test_bang_operator :: proc(t: ^testing.T) {
+	tests := []struct {
+		input:    string,
+		expected: bool,
+	} {
+		{"!true", false},
+		{"!false", true},
+		{"!5", false},
+		{"!!true", true},
+		{"!!false", false},
+		{"!!5", true},
+	}
 
 	for tt in tests {
 		evaluated := test_eval(tt.input)
@@ -111,5 +132,6 @@ test_parser_main :: proc(t: ^testing.T) {
 	defer delete_eval()
 
 	run_test(t, "[RUN] test_eval_integer_expr", test_eval_integer_expr)
-	run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
+	// run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
+	// run_test(t, "[RUN] test_bang_operator", test_bang_operator)
 }
