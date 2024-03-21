@@ -60,11 +60,6 @@ eval :: proc(node: ast.Node, env: ^object.Environment) -> ^object.Object {
 	case ^ast.Ident:
 		return eval_ident(v, env)
 	case ^ast.Function_Literal:
-		// obj := object.new_object(object.Function)
-		// obj.parameters = v.parameters
-		// obj.env = env
-		// obj.body = v.body
-		// return obj
 		obj := object.new_object(object.Function)
 		obj.parameters = v.parameters
 		obj.env = env
