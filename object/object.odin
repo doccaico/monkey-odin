@@ -1,13 +1,18 @@
 package object
 
+import "core:bytes"
 import "core:fmt"
 import "core:intrinsics"
+import "core:strings"
+
+import "../ast"
 
 INTEGER_OBJ :: "INTEGER"
 BOOLEAN_OBJ :: "BOOLEAN"
 NULL_OBJ :: "NULL"
 RETURN_VALUE_OBJ :: "RETURN_VALUE"
 ERROR_OBJ :: "ERROR"
+FUNCTION_OBJ :: "FUNCTION"
 
 object_array: [dynamic]^Object
 
@@ -17,8 +22,8 @@ Any_Obj :: union {
 	^Null,
 	^Return_Value,
 	^Error,
+	^Function,
 	// ^String,
-	// ^Function,
 	// ^Builtin,
 	// ^Array,
 	// ^Hash_Map,
@@ -52,6 +57,13 @@ Return_Value :: struct {
 Error :: struct {
 	using obj: Object,
 	message:   string,
+}
+
+Function :: struct {
+	using obj:  Object,
+	parameters: [dynamic]^ast.Ident,
+	body:       ^ast.Block_Stmt,
+	env:        ^Environment,
 }
 
 new_object :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
@@ -95,6 +107,8 @@ delete_object :: proc() {
 			free(v)
 		case ^Error:
 			free(v)
+		case ^Function:
+			free(v)
 		case:
 			panic("delete_object: unknown object type")
 		}
@@ -117,6 +131,8 @@ type :: proc(obj: ^Object) -> ObjectType {
 		return return_value_type(v)
 	case ^Error:
 		return error_type(v)
+	case ^Function:
+		return function_type(v)
 	case:
 		panic("type: unknown object type")
 	}
@@ -142,6 +158,10 @@ error_type :: proc(obj: ^Error) -> ObjectType {
 	return ERROR_OBJ
 }
 
+function_type :: proc(obj: ^Function) -> ObjectType {
+	return FUNCTION_OBJ
+}
+
 inspect :: proc(obj: ^Object) -> string {
 	switch v in obj.derived {
 	case ^Integer:
@@ -154,6 +174,8 @@ inspect :: proc(obj: ^Object) -> string {
 		return return_value_inspect(v)
 	case ^Error:
 		return error_inspect(v)
+	case ^Function:
+		return function_inspect(v)
 	case:
 		panic("inspect: unknown object type")
 	}
@@ -177,4 +199,36 @@ return_value_inspect :: proc(obj: ^Return_Value) -> string {
 
 error_inspect :: proc(obj: ^Error) -> string {
 	return fmt.tprintf("ERROR: %s", obj.message)
+}
+
+function_inspect :: proc(obj: ^Function) -> string {
+	out: bytes.Buffer
+
+	params: [dynamic]string
+	defer delete(params)
+
+	for p in obj.parameters {
+
+		buf := ast.to_string(p)
+		defer bytes.buffer_destroy(&buf)
+		append(&params, bytes.buffer_to_string(&buf))
+	}
+
+	bytes.buffer_write_string(&out, "fn")
+	bytes.buffer_write_string(&out, "(")
+
+	s := strings.join(params[:], ", ")
+	bytes.buffer_write_string(&out, s)
+	delete(s)
+
+	bytes.buffer_write_string(&out, ") {\n")
+
+	buf := ast.to_string(obj.body)
+	defer bytes.buffer_destroy(&buf)
+	bytes.buffer_write(&out, bytes.buffer_to_bytes(&buf))
+
+	bytes.buffer_write_string(&out, "\n}")
+
+	// defer bytes.buffer_destroy(&buf)
+	return bytes.buffer_to_string(&out)
 }

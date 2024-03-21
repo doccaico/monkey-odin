@@ -1,6 +1,7 @@
 package repl
 
 import "core:bufio"
+import "core:fmt"
 import "core:io"
 // import "core:bytes"
 
@@ -24,6 +25,8 @@ start :: proc(stdin: io.Stream, stdout: io.Stream) {
 	env := object.new_enviroment()
 	defer object.delete_enviroment(env)
 
+	program: ^ast.Program
+
 	for {
 		io.write_string(stdout, PROMPT)
 
@@ -42,8 +45,9 @@ start :: proc(stdin: io.Stream, stdout: io.Stream) {
 		p := parser.new_parser(l)
 		defer parser.delete_parser(p)
 
-		program := parser.parse_program(p)
-		defer ast.delete_program(program)
+		program = parser.parse_program(p)
+		// program := parser.parse_program(p)
+		// defer ast.delete_program(program)
 
 		if len(parser.errors(p)) != 0 {
 			print_parser_errors(stdout, parser.errors(p))
@@ -58,14 +62,15 @@ start :: proc(stdin: io.Stream, stdout: io.Stream) {
 		// io.write_rune(stdout, '\n')
 
 		evaluated := evaluator.eval(program, env)
-		defer object.delete_object()
-		// defer object.delete_object(evaluated)
 		if evaluated != evaluator.NULL {
 			io.write_string(stdout, object.inspect(evaluated))
 			io.write_rune(stdout, '\n')
 		}
 
+		ast.add_program(program)
 	}
+
+	ast.delete_programs(program)
 }
 
 print_parser_errors :: proc(stdout: io.Stream, errors: [dynamic]string) {

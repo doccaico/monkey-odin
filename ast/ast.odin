@@ -8,6 +8,8 @@ import "core:strings"
 
 import "../lexer"
 
+program_list: [dynamic]^Program
+
 Any_Node :: union {
 	^Program,
 
@@ -199,6 +201,7 @@ delete_program :: proc(program: ^Program) {
 }
 
 free_expr_stmt :: proc(expr: ^Expr) {
+
 	// fmt.println(expr.expr_base.derived)
 	#partial switch t in expr.expr_base.derived {
 	case ^Prefix_Expr:
@@ -244,7 +247,12 @@ free_expr_stmt :: proc(expr: ^Expr) {
 		delete(t.parameters)
 
 		for stmt in t.body.statements {
-			free_expr_stmt(stmt.derived.(^Expr_Stmt).expr)
+			#partial switch t in stmt.derived {
+			case ^Expr_Stmt:
+				free_expr_stmt(t.expr)
+			case ^Return_Stmt:
+				free_expr_stmt(t.return_value)
+			}
 			free(stmt)
 		}
 		delete(t.body.statements)
@@ -279,6 +287,17 @@ free_expr_stmt :: proc(expr: ^Expr) {
 	case:
 		panic("free_expr_stmt: unknown expr type")
 	}
+}
+
+add_program :: proc(program: ^Program) {
+	append(&program_list, program)
+}
+
+delete_programs :: proc(program: ^Program) {
+	for p in program_list {
+		delete_program(p)
+	}
+	delete(program_list)
 }
 
 // token_literal
@@ -379,6 +398,9 @@ call_expr_token_literal :: proc(e: ^Call_Expr) -> string {
 // to_string
 
 to_string :: proc(node: Node) -> bytes.Buffer {
+	// fmt.printf("Function_Literal: fn.parameters: %p\n", node)
+	// fmt.printf("start : %s\n", node.derived.(^Ident).value)
+
 	switch v in node.derived {
 	case ^Program:
 		return program_to_string(v)

@@ -59,6 +59,27 @@ eval :: proc(node: ast.Node, env: ^object.Environment) -> ^object.Object {
 		object.set(env, v.name.value, val)
 	case ^ast.Ident:
 		return eval_ident(v, env)
+	case ^ast.Function_Literal:
+		// obj := object.new_object(object.Function)
+		// obj.parameters = v.parameters
+		// obj.env = env
+		// obj.body = v.body
+		// return obj
+		obj := object.new_object(object.Function)
+		obj.parameters = v.parameters
+		obj.env = env
+		obj.body = v.body
+		return obj
+	case ^ast.Call_Expr:
+		function := eval(v.function, env)
+		if is_error(function) {
+			return function
+		}
+		args := eval_exprs(v.arguments, env)
+		if len(args) == 1 && is_error(args[0]) {
+			return args[0]
+		}
+		return apply_function(function, args)
 	case:
 		panic("eval: unknown node type")
 	}
@@ -71,7 +92,6 @@ eval_program :: proc(program: ^ast.Program, env: ^object.Environment) -> ^object
 
 	for stmt in program.statements {
 		result = eval(stmt, env)
-
 		#partial switch v in result.derived {
 		case ^object.Return_Value:
 			return v.value
@@ -153,7 +173,6 @@ eval_bang_operator_expr :: proc(right: ^object.Object) -> ^object.Object {
 	case NULL:
 		return TRUE
 	case:
-		// free(right) // バグりそうな予感
 		return FALSE
 	}
 }
@@ -268,6 +287,61 @@ eval_ident :: proc(node: ^ast.Ident, env: ^object.Environment) -> ^object.Object
 
 	return val
 }
+
+eval_exprs :: proc(
+	exprs: [dynamic]^ast.Expr,
+	env: ^object.Environment,
+) -> [dynamic]^object.Object {
+	result: [dynamic]^object.Object
+	for e in exprs {
+		evaluated := eval(e, env)
+		if is_error(evaluated) {
+			// return []object.Object{evaluated} (Golang version)
+			append(&result, evaluated)
+			return result
+		}
+		append(&result, evaluated)
+	}
+
+	return result
+}
+
+apply_function :: proc(fn: ^object.Object, args: [dynamic]^object.Object) -> ^object.Object {
+	function, ok := fn.derived.(^object.Function)
+	if !ok {
+		return new_error("not a function: %s", object.type(fn))
+	}
+	extended_env := extend_function_env(function, args)
+	evaluated := eval(function.body, extended_env)
+
+	// バグりそう
+	delete(extended_env.store)
+	free(extended_env)
+	delete(args)
+
+	return unwrap_return_value(evaluated)
+}
+
+extend_function_env :: proc(
+	fn: ^object.Function,
+	args: [dynamic]^object.Object,
+) -> ^object.Environment {
+	env := object.new_enclosed_environment(fn.env)
+
+	for param, param_idx in fn.parameters {
+		object.set(env, param.value, args[param_idx])
+	}
+
+	return env
+}
+
+unwrap_return_value :: proc(obj: ^object.Object) -> ^object.Object {
+	if return_value, ok := obj.derived.(^object.Return_Value); ok {
+		return return_value.value
+	}
+	return obj
+}
+
 
 is_truthy :: proc(obj: ^object.Object) -> bool {
 	switch obj {

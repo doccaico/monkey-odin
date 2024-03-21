@@ -1,5 +1,6 @@
 package evaluator
 
+import "core:bytes"
 import "core:fmt"
 import "core:mem"
 import "core:testing"
@@ -256,11 +257,89 @@ test_let_stmts :: proc(t: ^testing.T) {
 		{"let a = 5; let b = a; b;", 5},
 		{"let a = 5; let b = a; let c = a + b + 5; c;", 15},
 		{"let a = 9; let b = 1; let c = a + b; a; b; c;", 10},
+		{"let d = if (10 > 5) { 99 } else { 100 }; d;", 99},
 	}
 
 	for tt in tests {
 		evaluated := test_eval(tt.input)
-		// defer object.delete_object()
+		test_integer_object(t, evaluated, tt.expected)
+	}
+}
+
+test_function_object :: proc(t: ^testing.T) {
+	input := "fn(x) { x + 2; };"
+
+	l := lexer.new_lexer(input)
+	defer lexer.delete_lexer(l)
+
+	p := parser.new_parser(l)
+	defer parser.delete_parser(p)
+
+	program := parser.parse_program(p)
+	defer ast.delete_program(program)
+
+	env := object.new_enviroment()
+	defer object.delete_enviroment(env)
+
+	evaluated := eval(program, env)
+	fn, ok := evaluated.derived.(^object.Function)
+	if !ok {
+		fmt.panicf("object is not Function. got=%T (%v)", evaluated, evaluated.derived)
+	}
+
+	if len(fn.parameters) != 1 {
+		fmt.panicf("function has wrong parameters. Parameters=%v", fn.parameters)
+	}
+
+	{
+		buf := ast.to_string(fn.parameters[0])
+		defer bytes.buffer_destroy(&buf)
+		actual := bytes.buffer_to_string(&buf)
+		if actual != "x" {
+			fmt.panicf("parameter is not 'x'. got=%v", fn.parameters[0])
+		}
+	}
+
+	expected_body := "(x + 2)"
+
+	{
+		buf := ast.to_string(fn.body)
+		defer bytes.buffer_destroy(&buf)
+		actual := bytes.buffer_to_string(&buf)
+		if actual != expected_body {
+			fmt.panicf("body is not %q. got=%q", expected_body, actual)
+		}
+	}
+}
+
+test_function_application :: proc(t: ^testing.T) {
+	tests := []struct {
+		input:    string,
+		expected: i64,
+	} {
+		{"let identity = fn(x) { x; }; identity(5);", 5},
+		{"let identity = fn(x) { return x; }; identity(5);", 5},
+		{"let double = fn(x) { x * 2; }; double(5);", 10},
+		{"let add = fn(x, y) { x + y; }; add(5, 5);", 10},
+		{"let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20},
+		{"fn(x) { x; }(5)", 5},
+	}
+
+	for tt in tests {
+
+		l := lexer.new_lexer(tt.input)
+		defer lexer.delete_lexer(l)
+
+		p := parser.new_parser(l)
+		defer parser.delete_parser(p)
+
+		program := parser.parse_program(p)
+		defer ast.delete_program(program)
+
+		env := object.new_enviroment()
+		defer object.delete_enviroment(env)
+
+		evaluated := eval(program, env)
 		test_integer_object(t, evaluated, tt.expected)
 	}
 }
@@ -306,4 +385,6 @@ test_evaluator_main :: proc(t: ^testing.T) {
 	run_test(t, "[RUN] test_return_stmts", test_return_stmts)
 	run_test(t, "[RUN] test_error_handling", test_error_handling)
 	run_test(t, "[RUN] test_let_stmts", test_let_stmts)
+	run_test(t, "[RUN] test_function_object", test_function_object)
+	run_test(t, "[RUN] test_function_application", test_function_application)
 }
