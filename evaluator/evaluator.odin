@@ -12,6 +12,9 @@ TRUE: ^object.Boolean
 FALSE: ^object.Boolean
 NULL: ^object.Null
 
+args_array: [dynamic][dynamic]^object.Object
+env_array: [dynamic]^object.Environment
+
 eval :: proc(node: ast.Node, env: ^object.Environment) -> ^object.Object {
 	#partial switch v in node.derived {
 	case ^ast.Program:
@@ -72,6 +75,7 @@ eval :: proc(node: ast.Node, env: ^object.Environment) -> ^object.Object {
 			return function
 		}
 		args := eval_exprs(v.arguments, env)
+		append(&args_array, args)
 		if len(args) == 1 && is_error(args[0]) {
 			return args[0]
 		}
@@ -148,6 +152,17 @@ delete_eval :: proc() {
 	free(TRUE)
 	free(FALSE)
 	free(NULL)
+
+	for args in args_array {
+		delete(args)
+	}
+	delete(args_array)
+
+	for env in env_array {
+		delete(env.store)
+		free(env)
+	}
+	delete(env_array)
 
 	object.delete_object()
 	delete(object.object_array)
@@ -308,12 +323,9 @@ apply_function :: proc(fn: ^object.Object, args: [dynamic]^object.Object) -> ^ob
 		return new_error("not a function: %s", object.type(fn))
 	}
 	extended_env := extend_function_env(function, args)
-	evaluated := eval(function.body, extended_env)
+	append(&env_array, extended_env)
 
-	// バグりそう
-	delete(extended_env.store)
-	free(extended_env)
-	delete(args)
+	evaluated := eval(function.body, extended_env)
 
 	return unwrap_return_value(evaluated)
 }

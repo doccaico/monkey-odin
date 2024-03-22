@@ -17,6 +17,8 @@ delete_enviroment :: proc(e: ^Environment) {
 	// 	fmt.println(a, b)
 	// }
 	// fmt.println(e)
+	// delete(e.outer.store)
+	// free(e.outer.outer)
 
 	delete(e.store)
 	free(e.outer)
@@ -30,14 +32,6 @@ delete_enviroment :: proc(e: ^Environment) {
 	// free(e.outer.outer)
 	// free(e.outer.outer)
 	// delete_outer(e.outer)
-	free(e)
-}
-
-delete_outer :: proc(e: ^Environment) {
-
-	// fmt.println("Heelo world")
-	// delete_outer(e.outer)
-	delete(e.store)
 	free(e)
 }
 

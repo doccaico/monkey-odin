@@ -373,7 +373,7 @@ test_string_concatenation :: proc(t: ^testing.T) {
 	}
 }
 
-test_complex_cases :: proc(t: ^testing.T) {
+test_string_complex_cases :: proc(t: ^testing.T) {
 
 	tests := []struct {
 		input:    string,
@@ -381,12 +381,21 @@ test_complex_cases :: proc(t: ^testing.T) {
 	} {
 		 {
 			`
-    let a = "A";
-    let b = "B";
-    let concat = fn(a, b){ a+b };
-    concat(a, b);
+		let a = "A";
+		let b = "B";
+		let space = " ";
+		let concat = fn(a, b){ a + space + b };
+		concat(a, b);
+		`,
+			"A B",
+		},
+		 {
+			`
+    let makeGreeter = fn(greeting) { fn(name) { greeting + " " + name + "!" } };
+    let hello = makeGreeter("Hello");
+    hello("Thorsten");
     `,
-			"AB",
+			"Hello Thorsten!",
 		},
 	}
 
@@ -438,17 +447,17 @@ test_evaluator_main :: proc(t: ^testing.T) {
 	new_eval()
 	defer delete_eval()
 
-	// run_test(t, "[RUN] test_eval_integer_expr", test_eval_integer_expr)
-	// run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
-	// run_test(t, "[RUN] test_bang_operator", test_bang_operator)
-	// run_test(t, "[RUN] test_if_else_expr", test_if_else_expr)
-	// run_test(t, "[RUN] test_return_stmts", test_return_stmts)
-	// run_test(t, "[RUN] test_error_handling", test_error_handling)
-	// run_test(t, "[RUN] test_let_stmts", test_let_stmts)
-	// run_test(t, "[RUN] test_function_object", test_function_object)
-	// run_test(t, "[RUN] test_function_application", test_function_application)
-	// run_test(t, "[RUN] test_string_literal", test_string_literal)
-	// run_test(t, "[RUN] test_string_concatenation", test_string_concatenation)
-	run_test(t, "[RUN] test_complex_cases", test_complex_cases)
+	run_test(t, "[RUN] test_eval_integer_expr", test_eval_integer_expr)
+	run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
+	run_test(t, "[RUN] test_bang_operator", test_bang_operator)
+	run_test(t, "[RUN] test_if_else_expr", test_if_else_expr)
+	run_test(t, "[RUN] test_return_stmts", test_return_stmts)
+	run_test(t, "[RUN] test_error_handling", test_error_handling)
+	run_test(t, "[RUN] test_let_stmts", test_let_stmts)
+	run_test(t, "[RUN] test_function_object", test_function_object)
+	run_test(t, "[RUN] test_function_application", test_function_application)
+	run_test(t, "[RUN] test_string_literal", test_string_literal)
+	run_test(t, "[RUN] test_string_concatenation", test_string_concatenation)
+	run_test(t, "[RUN] test_string_complex_cases", test_string_complex_cases)
 
 }
