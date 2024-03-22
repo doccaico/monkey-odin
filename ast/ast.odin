@@ -29,7 +29,7 @@ Any_Node :: union {
 	^Function_Literal,
 	^Call_Expr,
 	^String_Literal,
-	// ^Array_Literal,
+	^Array_Literal,
 	// ^Index_Expr,
 	// ^Hash_Expr,
 }
@@ -143,6 +143,12 @@ String_Literal :: struct {
 	using node: Expr,
 	token:      lexer.Token,
 	value:      string,
+}
+
+Array_Literal :: struct {
+	using node: Expr,
+	token:      lexer.Token,
+	elements:   [dynamic]^Expr,
 }
 
 new_node :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
@@ -279,20 +285,14 @@ free_expr_stmt :: proc(expr: ^Expr) {
 		free(t)
 	case ^String_Literal:
 		free(t)
-	// case ^Let_Stmt:
-	// 	fmt.println(">>>>>> In Let_Stmt")
-	// 	free_expr_stmt(t.name)
-	// 	free_expr_stmt(t.value)
-	// 	free(t)
-	// case ^Expr_Stmt:
-	// 	fmt.printf("Expr_Stmt\n")
-	// case ^Bool_Literal:
-	// 	fmt.printf("bool literal\n")
-	// case ^Block_Stmt:
-	// 	fmt.println("In Block_Stmt")
-	// case:
-	// 	fmt.println("------------", t)
+	case ^Array_Literal:
+		for expr in t.elements {
+			free_expr_stmt(expr)
+		}
+		delete(t.elements)
+		free(t)
 	case:
+		// fmt.println(t)
 		panic("free_expr_stmt: unknown expr type")
 	}
 }
@@ -340,9 +340,10 @@ token_literal :: proc(node: Node) -> string {
 		return call_expr_token_literal(v)
 	case ^String_Literal:
 		return string_literal_token_literal(v)
-	// case ^Array_Literal: return array_expr__token_literal(v)
-	// case ^Index_Expr: return index_expr__token_literal(v)
-	// case ^Hash_Expr: return hash_expr__token_literal(v)
+	case ^Array_Literal:
+		return array_literal_token_literal(v)
+	// case ^Index_Expr: return index_literal__token_literal(v)
+	// case ^Hash_Expr: return hash_literal__token_literal(v)
 	case:
 		panic("token_literal: unknown node type")
 	}
@@ -408,6 +409,10 @@ string_literal_token_literal :: proc(e: ^String_Literal) -> string {
 	return e.token.literal
 }
 
+array_literal_token_literal :: proc(e: ^Array_Literal) -> string {
+	return e.token.literal
+}
+
 // to_string
 
 to_string :: proc(node: Node) -> bytes.Buffer {
@@ -440,12 +445,12 @@ to_string :: proc(node: Node) -> bytes.Buffer {
 		return call_expr_to_string(v)
 	case ^String_Literal:
 		return string_literal_to_string(v)
-	// case ^Array_Literal:
-	// 	return array_expr_to_string(v)
+	case ^Array_Literal:
+		return array_literal_to_string(v)
 	// case ^Index_Expr:
-	// 	return index_expr_to_string(v)
+	// 	return index_literal_to_string(v)
 	// case ^Hash_Expr:
-	// 	return hash_expr_to_string(v)
+	// 	return hash_literal_to_string(v)
 	case:
 		panic("to_string: unknown node type")
 	}
@@ -681,6 +686,37 @@ string_literal_to_string :: proc(e: ^String_Literal) -> bytes.Buffer {
 	out: bytes.Buffer
 
 	bytes.buffer_write_string(&out, e.token.literal)
+
+	return out
+}
+
+array_literal_to_string :: proc(e: ^Array_Literal) -> bytes.Buffer {
+	out: bytes.Buffer
+
+	bufs: [dynamic]bytes.Buffer
+	defer {
+		for buf in &bufs {
+			bytes.buffer_destroy(&buf)
+		}
+		delete(bufs)
+	}
+
+	for elm in e.elements {
+		append(&bufs, to_string(elm))
+	}
+
+	bytes.buffer_write_string(&out, "(")
+
+	string_array: [dynamic]string
+	defer delete(string_array)
+	for b in &bufs {
+		append(&string_array, bytes.buffer_to_string(&b))
+	}
+	s := strings.join(string_array[:], ", ")
+	defer delete(s)
+	bytes.buffer_write_string(&out, s)
+
+	bytes.buffer_write_string(&out, ")")
 
 	return out
 }

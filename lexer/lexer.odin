@@ -27,9 +27,9 @@ LPAREN :: "("
 RPAREN :: ")"
 LBRACE :: "{"
 RBRACE :: "}"
+LBRACKET :: "["
+RBRACKET :: "]"
 // COLON :: ":"
-// LBRACKET :: "["
-// RBRACKET :: "]"
 
 // Keywords
 FUNCTION :: "FUNCTION"
@@ -169,6 +169,12 @@ next_token :: proc(l: ^Lexer) -> Token {
 	case '"':
 		tok.type = STRING
 		tok.literal = read_string(l)
+	case '[':
+		tok.type = LBRACKET
+		tok.literal = "["
+	case ']':
+		tok.type = RBRACKET
+		tok.literal = "]"
 	case:
 		if is_letter(l.ch) {
 			tok.literal = read_identifier(l)

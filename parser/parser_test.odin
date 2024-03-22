@@ -1014,6 +1014,98 @@ test_string_literal_expr :: proc(t: ^testing.T) {
 	}
 }
 
+test_parsing_array_literals :: proc(t: ^testing.T) {
+	input := "[1, 2 * 2, 3 + 3]"
+
+	l := lexer.new_lexer(input)
+	defer lexer.delete_lexer(l)
+
+	p := new_parser(l)
+	defer delete_parser(p)
+
+	program := parse_program(p)
+	defer ast.delete_program(program)
+
+	check_parser_errors(t, p)
+
+	stmt := program.statements[0].derived.(^ast.Expr_Stmt)
+	array, ok := stmt.expr.derived.(^ast.Array_Literal)
+	if !ok {
+		fmt.panicf("exp not ^ast.Array_Literal. got=%T", stmt.expr.derived)
+	}
+
+	if len(array.elements) != 3 {
+		fmt.panicf("len(array.elements) not 3. got=%d", len(array.elements))
+	}
+
+	test_int_literal(t, array.elements[0], 1)
+
+	{
+		// 2 * 2
+		infix, ok_infix := array.elements[1].derived.(^ast.Infix_Expr)
+		if !ok_infix {
+			fmt.panicf("array.elements[1] is not ^ast.Infix_Expr. got=%T", array.elements[1])
+		}
+
+		{
+			ilit, ok_ilit := infix.left.derived.(^ast.Int_Literal)
+			if !ok_ilit {
+				fmt.panicf("infix.left is not ^ast.Int_Literal. got=%T", infix.left)
+			}
+			if ilit.value != 2 {
+				testing.errorf(t, "ilit.value is not =%d, got=%v", 2, ilit.value)
+			}
+		}
+
+		if infix.operator != "*" {
+			testing.errorf(t, "infix.operator is not '%s'. got='%s'", "*", infix.operator)
+		}
+
+		{
+			ilit, ok_ilit := infix.right.derived.(^ast.Int_Literal)
+			if !ok_ilit {
+				fmt.panicf("infix.right is not ^ast.Int_Literal. got=%T", infix.left)
+			}
+			if ilit.value != 2 {
+				testing.errorf(t, "ilit.value is not =%d, got=%v", 2, ilit.value)
+			}
+		}
+	}
+
+	{
+		// 3 + 3
+		infix, ok_infix := array.elements[2].derived.(^ast.Infix_Expr)
+		if !ok_infix {
+			fmt.panicf("array.elements[2] is not ^ast.Infix_Expr. got=%T", array.elements[2])
+		}
+
+		{
+			ilit, ok_ilit := infix.left.derived.(^ast.Int_Literal)
+			if !ok_ilit {
+				fmt.panicf("infix.left is not ^ast.Int_Literal. got=%T", infix.left)
+			}
+			if ilit.value != 3 {
+				testing.errorf(t, "ilit.value is not =%d, got=%v", 3, ilit.value)
+			}
+		}
+
+		if infix.operator != "+" {
+			testing.errorf(t, "infix.operator is not '%s'. got='%s'", "*", infix.operator)
+		}
+
+		{
+			ilit, ok_ilit := infix.right.derived.(^ast.Int_Literal)
+			if !ok_ilit {
+				fmt.panicf("infix.right is not ^ast.Int_Literal. got=%T", infix.left)
+			}
+			if ilit.value != 3 {
+				testing.errorf(t, "ilit.value is not =%d, got=%v", 3, ilit.value)
+			}
+		}
+	}
+
+}
+
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
@@ -1059,5 +1151,6 @@ test_parser_main :: proc(t: ^testing.T) {
 	// run_test(t, "[RUN] test_function_literal_parsing", test_function_literal_parsing)
 	// run_test(t, "[RUN] test_call_expr_parsing", test_call_expr_parsing)
 	// run_test(t, "[RUN] test_let_stmts2", test_let_stmts2)
-	run_test(t, "[RUN] test_string_literal_expr", test_string_literal_expr)
+	// run_test(t, "[RUN] test_string_literal_expr", test_string_literal_expr)
+	run_test(t, "[RUN] test_parsing_array_literals", test_parsing_array_literals)
 }

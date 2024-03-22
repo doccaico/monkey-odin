@@ -70,6 +70,7 @@ new_parser :: proc(l: ^lexer.Lexer) -> ^Parser {
 	register_prefix(p, lexer.IF, parse_if_expr)
 	register_prefix(p, lexer.FUNCTION, parse_function_literal)
 	register_prefix(p, lexer.STRING, parse_string_literal)
+	register_prefix(p, lexer.LBRACKET, parse_array_literal)
 
 	register_infix(p, lexer.PLUS, parse_infix_expr)
 	register_infix(p, lexer.MINUS, parse_infix_expr)
@@ -397,33 +398,9 @@ parse_call_expr :: proc(p: ^Parser, function: ^ast.Expr) -> ^ast.Expr {
 	expr := ast.new_node(ast.Call_Expr)
 	expr.token = p.cur_token
 	expr.function = function
-	expr.arguments = parse_call_arguments(p)
+	expr.arguments = parse_expr_list(p, lexer.RPAREN)
 
 	return expr
-}
-
-parse_call_arguments :: proc(p: ^Parser) -> [dynamic]^ast.Expr {
-	args: [dynamic]^ast.Expr
-
-	if peek_token_is(p, lexer.RPAREN) {
-		next_token(p)
-		return args
-	}
-
-	next_token(p)
-	append(&args, parse_expr(p, .LOWEST))
-
-	for peek_token_is(p, lexer.COMMA) {
-		next_token(p)
-		next_token(p)
-		append(&args, parse_expr(p, .LOWEST))
-	}
-
-	if !expect_peek(p, lexer.RPAREN) {
-		return nil
-	}
-
-	return args
 }
 
 parse_string_literal :: proc(p: ^Parser) -> ^ast.Expr {
@@ -432,6 +409,39 @@ parse_string_literal :: proc(p: ^Parser) -> ^ast.Expr {
 	expr.value = p.cur_token.literal
 
 	return expr
+}
+
+parse_array_literal :: proc(p: ^Parser) -> ^ast.Expr {
+	expr := ast.new_node(ast.Array_Literal)
+	expr.token = p.cur_token
+
+	expr.elements = parse_expr_list(p, lexer.RBRACKET)
+
+	return expr
+}
+
+parse_expr_list :: proc(p: ^Parser, end: lexer.TokenType) -> [dynamic]^ast.Expr {
+	list: [dynamic]^ast.Expr
+
+	if peek_token_is(p, end) {
+		next_token(p)
+		return list
+	}
+
+	next_token(p)
+	append(&list, parse_expr(p, .LOWEST))
+
+	for peek_token_is(p, lexer.COMMA) {
+		next_token(p)
+		next_token(p)
+		append(&list, parse_expr(p, .LOWEST))
+	}
+
+	if !expect_peek(p, end) {
+		return nil
+	}
+
+	return list
 }
 
 cur_token_is :: proc(p: ^Parser, t: lexer.TokenType) -> bool {
