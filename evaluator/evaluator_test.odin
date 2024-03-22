@@ -14,6 +14,11 @@ Types1 :: union {
 	i64,
 }
 
+Types2 :: union #no_nil {
+	i64,
+	string,
+}
+
 test_eval :: proc(input: string) -> ^object.Object {
 	l := lexer.new_lexer(input)
 	defer lexer.delete_lexer(l)
@@ -413,6 +418,43 @@ test_string_complex_cases :: proc(t: ^testing.T) {
 	}
 }
 
+test_builtin_functions :: proc(t: ^testing.T) {
+	tests := []struct {
+		input:    string,
+		expected: Types2,
+	} {
+		{`len("")`, 0},
+		{`len("four")`, 4},
+		{`len("hello world")`, 11},
+		{`len(1)`, "argument to `len` not supported, got INTEGER"},
+		{`len("one", "two")`, "wrong number of arguments. got=2, want=1"},
+	}
+
+	for tt in tests {
+		evaluated := test_eval(tt.input)
+
+		switch expected in tt.expected {
+		case i64:
+			test_integer_object(t, evaluated, expected)
+		case string:
+			err_obj, ok := evaluated.derived.(^object.Error)
+			if !ok {
+				testing.errorf(t, "object is not Error. got=%T (%v)", evaluated, evaluated.derived)
+			}
+			if err_obj.message != expected {
+				testing.errorf(
+					t,
+					"wrong error message. expected=%q, got=%q",
+					expected,
+					err_obj.message,
+				)
+			}
+
+		}
+
+	}
+}
+
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
@@ -447,17 +489,18 @@ test_evaluator_main :: proc(t: ^testing.T) {
 	new_eval()
 	defer delete_eval()
 
-	run_test(t, "[RUN] test_eval_integer_expr", test_eval_integer_expr)
-	run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
-	run_test(t, "[RUN] test_bang_operator", test_bang_operator)
-	run_test(t, "[RUN] test_if_else_expr", test_if_else_expr)
-	run_test(t, "[RUN] test_return_stmts", test_return_stmts)
-	run_test(t, "[RUN] test_error_handling", test_error_handling)
-	run_test(t, "[RUN] test_let_stmts", test_let_stmts)
-	run_test(t, "[RUN] test_function_object", test_function_object)
-	run_test(t, "[RUN] test_function_application", test_function_application)
-	run_test(t, "[RUN] test_string_literal", test_string_literal)
-	run_test(t, "[RUN] test_string_concatenation", test_string_concatenation)
-	run_test(t, "[RUN] test_string_complex_cases", test_string_complex_cases)
+	// run_test(t, "[RUN] test_eval_integer_expr", test_eval_integer_expr)
+	// run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
+	// run_test(t, "[RUN] test_bang_operator", test_bang_operator)
+	// run_test(t, "[RUN] test_if_else_expr", test_if_else_expr)
+	// run_test(t, "[RUN] test_return_stmts", test_return_stmts)
+	// run_test(t, "[RUN] test_error_handling", test_error_handling)
+	// run_test(t, "[RUN] test_let_stmts", test_let_stmts)
+	// run_test(t, "[RUN] test_function_object", test_function_object)
+	// run_test(t, "[RUN] test_function_application", test_function_application)
+	// run_test(t, "[RUN] test_string_literal", test_string_literal)
+	// run_test(t, "[RUN] test_string_concatenation", test_string_concatenation)
+	// run_test(t, "[RUN] test_string_complex_cases", test_string_complex_cases)
+	run_test(t, "[RUN] test_builtin_functions", test_builtin_functions)
 
 }

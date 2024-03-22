@@ -166,6 +166,8 @@ delete_eval :: proc() {
 
 	object.delete_object()
 	delete(object.object_array)
+
+	// delete(builtins)
 }
 
 eval_prefix_expr :: proc(operator: string, right: ^object.Object) -> ^object.Object {
@@ -291,12 +293,15 @@ eval_if_expr :: proc(e: ^ast.If_Expr, env: ^object.Environment) -> ^object.Objec
 }
 
 eval_ident :: proc(node: ^ast.Ident, env: ^object.Environment) -> ^object.Object {
-	val, ok := object.get(env, node.value)
-	if !ok {
-		return new_error(fmt.tprintf("identifier not found: %s", node.value))
+	if val, ok := object.get(env, node.value); ok {
+		return val
 	}
 
-	return val
+	if builtin, ok := builtins[node.value]; ok {
+		return builtin
+	}
+
+	return new_error(fmt.tprintf("identifier not found: %s", node.value))
 }
 
 eval_exprs :: proc(
@@ -317,17 +322,31 @@ eval_exprs :: proc(
 	return result
 }
 
+// apply_function :: proc(fn: ^object.Object, args: [dynamic]^object.Object) -> ^object.Object {
+// 	function, ok := fn.derived.(^object.Function)
+// 	if !ok {
+// 		return new_error("not a function: %s", object.type(fn))
+// 	}
+// 	extended_env := extend_function_env(function, args)
+// 	append(&env_array, extended_env)
+//
+// 	evaluated := eval(function.body, extended_env)
+//
+// 	return unwrap_return_value(evaluated)
+// }
+
 apply_function :: proc(fn: ^object.Object, args: [dynamic]^object.Object) -> ^object.Object {
-	function, ok := fn.derived.(^object.Function)
-	if !ok {
+	#partial switch f in fn.derived {
+	case ^object.Function:
+		extended_env := extend_function_env(f, args)
+		append(&env_array, extended_env)
+		evaluated := eval(f.body, extended_env)
+		return unwrap_return_value(evaluated)
+	case ^object.Builtin:
+		return f.fn(args)
+	case:
 		return new_error("not a function: %s", object.type(fn))
 	}
-	extended_env := extend_function_env(function, args)
-	append(&env_array, extended_env)
-
-	evaluated := eval(function.body, extended_env)
-
-	return unwrap_return_value(evaluated)
 }
 
 extend_function_env :: proc(

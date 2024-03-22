@@ -14,8 +14,12 @@ RETURN_VALUE_OBJ :: "RETURN_VALUE"
 ERROR_OBJ :: "ERROR"
 FUNCTION_OBJ :: "FUNCTION"
 STRING_OBJ :: "STRING"
+BUILTIN_OBJ :: "BUILTIN"
+
+BuiltinFunction :: proc(args: [dynamic]^Object) -> ^Object
 
 object_array: [dynamic]^Object
+
 
 Any_Obj :: union {
 	^Integer,
@@ -25,7 +29,7 @@ Any_Obj :: union {
 	^Error,
 	^Function,
 	^String,
-	// ^Builtin,
+	^Builtin,
 	// ^Array,
 	// ^Hash_Map,
 }
@@ -71,6 +75,11 @@ String :: struct {
 	using obj: Object,
 	value:     string,
 	heap:      bool,
+}
+
+Builtin :: struct {
+	using obj: Object,
+	fn:        BuiltinFunction,
 }
 
 new_object :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
@@ -147,6 +156,8 @@ type :: proc(obj: ^Object) -> ObjectType {
 		return function_type(v)
 	case ^String:
 		return string_type(v)
+	case ^Builtin:
+		return builtin_type(v)
 	case:
 		panic("type: unknown object type")
 	}
@@ -180,6 +191,10 @@ string_type :: proc(obj: ^String) -> ObjectType {
 	return STRING_OBJ
 }
 
+builtin_type :: proc(obj: ^Builtin) -> ObjectType {
+	return BUILTIN_OBJ
+}
+
 inspect :: proc(obj: ^Object) -> string {
 	switch v in obj.derived {
 	case ^Integer:
@@ -196,6 +211,8 @@ inspect :: proc(obj: ^Object) -> string {
 		return function_inspect(v)
 	case ^String:
 		return string_inspect(v)
+	case ^Builtin:
+		return builtin_inspect(v)
 	case:
 		panic("inspect: unknown object type")
 	}
@@ -249,10 +266,13 @@ function_inspect :: proc(obj: ^Function) -> string {
 
 	bytes.buffer_write_string(&out, "\n}")
 
-	// defer bytes.buffer_destroy(&buf)
 	return bytes.buffer_to_string(&out)
 }
 
 string_inspect :: proc(obj: ^String) -> string {
 	return obj.value
+}
+
+builtin_inspect :: proc(obj: ^Builtin) -> string {
+	return "builtin function"
 }
