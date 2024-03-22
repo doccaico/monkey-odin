@@ -30,7 +30,7 @@ Any_Node :: union {
 	^Call_Expr,
 	^String_Literal,
 	^Array_Literal,
-	// ^Index_Expr,
+	^Index_Expr,
 	// ^Hash_Expr,
 }
 
@@ -149,6 +149,13 @@ Array_Literal :: struct {
 	using node: Expr,
 	token:      lexer.Token,
 	elements:   [dynamic]^Expr,
+}
+
+Index_Expr :: struct {
+	using node: Expr,
+	token:      lexer.Token,
+	left:       ^Expr,
+	index:      ^Expr,
 }
 
 new_node :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
@@ -291,6 +298,10 @@ free_expr_stmt :: proc(expr: ^Expr) {
 		}
 		delete(t.elements)
 		free(t)
+	case ^Index_Expr:
+		free_expr_stmt(t.left)
+		free_expr_stmt(t.index)
+		free(t)
 	case:
 		// fmt.println(t)
 		panic("free_expr_stmt: unknown expr type")
@@ -342,7 +353,8 @@ token_literal :: proc(node: Node) -> string {
 		return string_literal_token_literal(v)
 	case ^Array_Literal:
 		return array_literal_token_literal(v)
-	// case ^Index_Expr: return index_literal__token_literal(v)
+	case ^Index_Expr:
+		return index_expr_token_literal(v)
 	// case ^Hash_Expr: return hash_literal__token_literal(v)
 	case:
 		panic("token_literal: unknown node type")
@@ -413,6 +425,10 @@ array_literal_token_literal :: proc(e: ^Array_Literal) -> string {
 	return e.token.literal
 }
 
+index_expr_token_literal :: proc(e: ^Index_Expr) -> string {
+	return e.token.literal
+}
+
 // to_string
 
 to_string :: proc(node: Node) -> bytes.Buffer {
@@ -447,8 +463,8 @@ to_string :: proc(node: Node) -> bytes.Buffer {
 		return string_literal_to_string(v)
 	case ^Array_Literal:
 		return array_literal_to_string(v)
-	// case ^Index_Expr:
-	// 	return index_literal_to_string(v)
+	case ^Index_Expr:
+		return index_expr_to_string(v)
 	// case ^Hash_Expr:
 	// 	return hash_literal_to_string(v)
 	case:
@@ -705,7 +721,7 @@ array_literal_to_string :: proc(e: ^Array_Literal) -> bytes.Buffer {
 		append(&bufs, to_string(elm))
 	}
 
-	bytes.buffer_write_string(&out, "(")
+	bytes.buffer_write_string(&out, "[")
 
 	string_array: [dynamic]string
 	defer delete(string_array)
@@ -716,7 +732,27 @@ array_literal_to_string :: proc(e: ^Array_Literal) -> bytes.Buffer {
 	defer delete(s)
 	bytes.buffer_write_string(&out, s)
 
-	bytes.buffer_write_string(&out, ")")
+	bytes.buffer_write_string(&out, "]")
+
+	return out
+}
+
+index_expr_to_string :: proc(e: ^Index_Expr) -> bytes.Buffer {
+	out: bytes.Buffer
+
+	bytes.buffer_write_string(&out, "(")
+
+	left_buf := to_string(e.left)
+	defer bytes.buffer_destroy(&left_buf)
+	bytes.buffer_write(&out, bytes.buffer_to_bytes(&left_buf))
+
+	bytes.buffer_write_string(&out, "[")
+
+	index_buf := to_string(e.index)
+	defer bytes.buffer_destroy(&index_buf)
+	bytes.buffer_write(&out, bytes.buffer_to_bytes(&index_buf))
+
+	bytes.buffer_write_string(&out, "])")
 
 	return out
 }

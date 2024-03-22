@@ -15,6 +15,7 @@ precedence :: enum {
 	PRODUCT, // *
 	PREFIX, // -X or !X
 	CALL, // my_function(X)
+	INDEX, // array[index]
 }
 
 precedences := map[lexer.TokenType]precedence {
@@ -27,6 +28,7 @@ precedences := map[lexer.TokenType]precedence {
 	lexer.SLASH    = .PRODUCT,
 	lexer.ASTERISK = .PRODUCT,
 	lexer.LPAREN   = .CALL,
+	lexer.LBRACKET = .INDEX,
 }
 
 
@@ -81,6 +83,7 @@ new_parser :: proc(l: ^lexer.Lexer) -> ^Parser {
 	register_infix(p, lexer.LT, parse_infix_expr)
 	register_infix(p, lexer.GT, parse_infix_expr)
 	register_infix(p, lexer.LPAREN, parse_call_expr)
+	register_infix(p, lexer.LBRACKET, parse_index_expr)
 
 	return p
 }
@@ -442,6 +445,21 @@ parse_expr_list :: proc(p: ^Parser, end: lexer.TokenType) -> [dynamic]^ast.Expr 
 	}
 
 	return list
+}
+
+parse_index_expr :: proc(p: ^Parser, left: ^ast.Expr) -> ^ast.Expr {
+	expr := ast.new_node(ast.Index_Expr)
+	expr.token = p.cur_token
+	expr.left = left
+
+	next_token(p)
+	expr.index = parse_expr(p, .LOWEST)
+
+	if !expect_peek(p, lexer.RBRACKET) {
+		return nil
+	}
+
+	return expr
 }
 
 cur_token_is :: proc(p: ^Parser, t: lexer.TokenType) -> bool {
