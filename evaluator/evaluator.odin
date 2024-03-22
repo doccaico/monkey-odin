@@ -167,7 +167,7 @@ delete_eval :: proc() {
 	object.delete_object()
 	delete(object.object_array)
 
-	// delete(builtins)
+	delete(builtins)
 }
 
 eval_prefix_expr :: proc(operator: string, right: ^object.Object) -> ^object.Object {
