@@ -69,6 +69,7 @@ new_parser :: proc(l: ^lexer.Lexer) -> ^Parser {
 	register_prefix(p, lexer.LPAREN, parse_grouped_expr)
 	register_prefix(p, lexer.IF, parse_if_expr)
 	register_prefix(p, lexer.FUNCTION, parse_function_literal)
+	register_prefix(p, lexer.STRING, parse_string_literal)
 
 	register_infix(p, lexer.PLUS, parse_infix_expr)
 	register_infix(p, lexer.MINUS, parse_infix_expr)
@@ -423,6 +424,14 @@ parse_call_arguments :: proc(p: ^Parser) -> [dynamic]^ast.Expr {
 	}
 
 	return args
+}
+
+parse_string_literal :: proc(p: ^Parser) -> ^ast.Expr {
+	expr := ast.new_node(ast.String_Literal)
+	expr.token = p.cur_token
+	expr.value = p.cur_token.literal
+
+	return expr
 }
 
 cur_token_is :: proc(p: ^Parser, t: lexer.TokenType) -> bool {

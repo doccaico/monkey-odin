@@ -39,6 +39,7 @@ FALSE :: "FALSE"
 IF :: "IF"
 ELSE :: "ELSE"
 RETURN :: "RETURN"
+STRING :: "STRING"
 
 keywords := map[string]TokenType {
 	"fn"     = FUNCTION,
@@ -165,16 +166,17 @@ next_token :: proc(l: ^Lexer) -> Token {
 	case 0:
 		tok.type = EOF
 		tok.literal = ""
+	case '"':
+		tok.type = STRING
+		tok.literal = read_string(l)
 	case:
 		if is_letter(l.ch) {
 			tok.literal = read_identifier(l)
 			tok.type = lookup_ident(tok.literal)
-			// append(&l.tokens, tok)
 			return tok
 		} else if is_digit(l.ch) {
 			tok.literal = read_number(l)
 			tok.type = INT
-			// append(&l.tokens, tok)
 			return tok
 		} else {
 			tok.literal = string_from_byte(l.ch)
@@ -185,7 +187,6 @@ next_token :: proc(l: ^Lexer) -> Token {
 
 	read_char(l)
 
-	// append(&l.tokens, tok)
 	return tok
 }
 
@@ -201,6 +202,17 @@ read_number :: proc(l: ^Lexer) -> string {
 	position := l.position
 	for is_digit(l.ch) {
 		read_char(l)
+	}
+	return l.input[position:l.position]
+}
+
+read_string :: proc(l: ^Lexer) -> string {
+	position := l.position + 1
+	for {
+		read_char(l)
+		if l.ch == '"' {
+			break
+		}
 	}
 	return l.input[position:l.position]
 }

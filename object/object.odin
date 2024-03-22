@@ -13,6 +13,7 @@ NULL_OBJ :: "NULL"
 RETURN_VALUE_OBJ :: "RETURN_VALUE"
 ERROR_OBJ :: "ERROR"
 FUNCTION_OBJ :: "FUNCTION"
+STRING_OBJ :: "STRING"
 
 object_array: [dynamic]^Object
 
@@ -23,7 +24,7 @@ Any_Obj :: union {
 	^Return_Value,
 	^Error,
 	^Function,
-	// ^String,
+	^String,
 	// ^Builtin,
 	// ^Array,
 	// ^Hash_Map,
@@ -64,6 +65,12 @@ Function :: struct {
 	parameters: [dynamic]^ast.Ident,
 	body:       ^ast.Block_Stmt,
 	env:        ^Environment,
+}
+
+String :: struct {
+	using obj: Object,
+	value:     string,
+	heap:      bool,
 }
 
 new_object :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
@@ -109,6 +116,11 @@ delete_object :: proc() {
 			free(v)
 		case ^Function:
 			free(v)
+		case ^String:
+			if v.heap {
+				delete(v.value)
+			}
+			free(v)
 		case:
 			panic("delete_object: unknown object type")
 		}
@@ -133,6 +145,8 @@ type :: proc(obj: ^Object) -> ObjectType {
 		return error_type(v)
 	case ^Function:
 		return function_type(v)
+	case ^String:
+		return string_type(v)
 	case:
 		panic("type: unknown object type")
 	}
@@ -162,6 +176,10 @@ function_type :: proc(obj: ^Function) -> ObjectType {
 	return FUNCTION_OBJ
 }
 
+string_type :: proc(obj: ^String) -> ObjectType {
+	return STRING_OBJ
+}
+
 inspect :: proc(obj: ^Object) -> string {
 	switch v in obj.derived {
 	case ^Integer:
@@ -176,6 +194,8 @@ inspect :: proc(obj: ^Object) -> string {
 		return error_inspect(v)
 	case ^Function:
 		return function_inspect(v)
+	case ^String:
+		return string_inspect(v)
 	case:
 		panic("inspect: unknown object type")
 	}
@@ -231,4 +251,8 @@ function_inspect :: proc(obj: ^Function) -> string {
 
 	// defer bytes.buffer_destroy(&buf)
 	return bytes.buffer_to_string(&out)
+}
+
+string_inspect :: proc(obj: ^String) -> string {
+	return obj.value
 }

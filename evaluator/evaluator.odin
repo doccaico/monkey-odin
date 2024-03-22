@@ -1,6 +1,7 @@
 package evaluator
 
 import "core:fmt"
+import "core:strings"
 // import "core:bytes"
 // import "core:mem"
 
@@ -75,6 +76,10 @@ eval :: proc(node: ast.Node, env: ^object.Environment) -> ^object.Object {
 			return args[0]
 		}
 		return apply_function(function, args)
+	case ^ast.String_Literal:
+		obj := object.new_object(object.String)
+		obj.value = v.value
+		return obj
 	case:
 		panic("eval: unknown node type")
 	}
@@ -204,6 +209,8 @@ eval_infix_expr :: proc(
 			operator,
 			object.type(right),
 		)
+	case object.type(left) == object.STRING_OBJ && object.type(right) == object.STRING_OBJ:
+		return eval_string_infix_expr(operator, left, right)
 	case:
 		return new_error(
 			"unknown operator: %s %s %s",
@@ -251,12 +258,6 @@ eval_integer_infix_expr :: proc(
 			object.type(right),
 		)
 	}
-	// if right == left {
-	// 	free(left)
-	// } else {
-	// 	free(left)
-	// 	free(right)
-	// }
 	return obj
 }
 
@@ -334,6 +335,29 @@ unwrap_return_value :: proc(obj: ^object.Object) -> ^object.Object {
 	if return_value, ok := obj.derived.(^object.Return_Value); ok {
 		return return_value.value
 	}
+	return obj
+}
+
+eval_string_infix_expr :: proc(
+	operator: string,
+	left: ^object.Object,
+	right: ^object.Object,
+) -> ^object.Object {
+	if operator != "+" {
+		return new_error(
+			"unknown operator: %s %s %s",
+			object.type(left),
+			operator,
+			object.type(right),
+		)
+	}
+	left_val := left.derived.(^object.String).value
+	right_val := right.derived.(^object.String).value
+	s := [?]string{left_val, right_val}
+
+	obj := object.new_object(object.String)
+	obj.value = strings.concatenate(s[:])
+	obj.heap = true
 	return obj
 }
 

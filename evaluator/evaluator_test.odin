@@ -220,6 +220,7 @@ test_error_handling :: proc(t: ^testing.T) {
 			"unknown operator: BOOLEAN + BOOLEAN",
 		},
 		{"foobar", "identifier not found: foobar"},
+		{`"Hello" - "World"`, "unknown operator: STRING - STRING"},
 	}
 
 	for tt in tests {
@@ -344,6 +345,65 @@ test_function_application :: proc(t: ^testing.T) {
 	}
 }
 
+test_string_literal :: proc(t: ^testing.T) {
+	input := `"Hello World!"`
+
+	evaluated := test_eval(input)
+	str, ok := evaluated.derived.(^object.String)
+	if !ok {
+		fmt.panicf("object is not String. got=%T (%v)", evaluated, evaluated.derived)
+	}
+
+	if str.value != "Hello World!" {
+		fmt.panicf("String has wrong value. got=%q", str.value)
+	}
+}
+
+test_string_concatenation :: proc(t: ^testing.T) {
+	input := `"Hello" + " " + "World!"`
+
+	evaluated := test_eval(input)
+	str, ok := evaluated.derived.(^object.String)
+	if !ok {
+		fmt.panicf("object is not String. got=%T (%v)", evaluated, evaluated.derived)
+	}
+
+	if str.value != "Hello World!" {
+		fmt.panicf("String has wrong value. got=%q", str.value)
+	}
+}
+
+test_complex_cases :: proc(t: ^testing.T) {
+
+	tests := []struct {
+		input:    string,
+		expected: string,
+	} {
+		 {
+			`
+    let a = "A";
+    let b = "B";
+    let concat = fn(a, b){ a+b };
+    concat(a, b);
+    `,
+			"AB",
+		},
+	}
+
+	for tt in tests {
+
+		evaluated := test_eval(tt.input)
+		str, ok := evaluated.derived.(^object.String)
+		if !ok {
+			fmt.panicf("object is not String. got=%T (%v)", evaluated, evaluated.derived)
+		}
+
+		if str.value != tt.expected {
+			fmt.panicf("String has wrong value. got=%q", str.value)
+		}
+	}
+}
+
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
@@ -378,13 +438,17 @@ test_evaluator_main :: proc(t: ^testing.T) {
 	new_eval()
 	defer delete_eval()
 
-	run_test(t, "[RUN] test_eval_integer_expr", test_eval_integer_expr)
-	run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
-	run_test(t, "[RUN] test_bang_operator", test_bang_operator)
-	run_test(t, "[RUN] test_if_else_expr", test_if_else_expr)
-	run_test(t, "[RUN] test_return_stmts", test_return_stmts)
-	run_test(t, "[RUN] test_error_handling", test_error_handling)
-	run_test(t, "[RUN] test_let_stmts", test_let_stmts)
-	run_test(t, "[RUN] test_function_object", test_function_object)
-	run_test(t, "[RUN] test_function_application", test_function_application)
+	// run_test(t, "[RUN] test_eval_integer_expr", test_eval_integer_expr)
+	// run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
+	// run_test(t, "[RUN] test_bang_operator", test_bang_operator)
+	// run_test(t, "[RUN] test_if_else_expr", test_if_else_expr)
+	// run_test(t, "[RUN] test_return_stmts", test_return_stmts)
+	// run_test(t, "[RUN] test_error_handling", test_error_handling)
+	// run_test(t, "[RUN] test_let_stmts", test_let_stmts)
+	// run_test(t, "[RUN] test_function_object", test_function_object)
+	// run_test(t, "[RUN] test_function_application", test_function_application)
+	// run_test(t, "[RUN] test_string_literal", test_string_literal)
+	// run_test(t, "[RUN] test_string_concatenation", test_string_concatenation)
+	run_test(t, "[RUN] test_complex_cases", test_complex_cases)
+
 }
