@@ -322,19 +322,6 @@ eval_exprs :: proc(
 	return result
 }
 
-// apply_function :: proc(fn: ^object.Object, args: [dynamic]^object.Object) -> ^object.Object {
-// 	function, ok := fn.derived.(^object.Function)
-// 	if !ok {
-// 		return new_error("not a function: %s", object.type(fn))
-// 	}
-// 	extended_env := extend_function_env(function, args)
-// 	append(&env_array, extended_env)
-//
-// 	evaluated := eval(function.body, extended_env)
-//
-// 	return unwrap_return_value(evaluated)
-// }
-
 apply_function :: proc(fn: ^object.Object, args: [dynamic]^object.Object) -> ^object.Object {
 	#partial switch f in fn.derived {
 	case ^object.Function:
