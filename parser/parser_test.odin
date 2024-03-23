@@ -9,6 +9,12 @@ import "../ast"
 import "../lexer"
 import "../parser"
 
+Types1 :: struct {
+	first:    i64,
+	operator: string,
+	second:   i64,
+}
+
 check_parser_errors :: proc(t: ^testing.T, p: ^Parser) {
 	errors := errors(p)
 	if len(errors) == 0 {
@@ -1175,6 +1181,129 @@ test_parsing_index_expr :: proc(t: ^testing.T) {
 	}
 }
 
+test_parsing_hash_literals_string_keys :: proc(t: ^testing.T) {
+	input := `{"one": 1, "two": 2, "three": 3}`
+
+	l := lexer.new_lexer(input)
+	defer lexer.delete_lexer(l)
+
+	p := new_parser(l)
+	defer delete_parser(p)
+
+	program := parse_program(p)
+	defer ast.delete_program(program)
+
+	check_parser_errors(t, p)
+
+	stmt := program.statements[0].derived.(^ast.Expr_Stmt)
+	hash, ok := stmt.expr.derived.(^ast.Hash_Literal)
+	if !ok {
+		fmt.panicf("exp not ^ast.Hash_Literal. got=%T", stmt.expr.derived)
+	}
+
+	if len(hash.pairs) != 3 {
+		testing.errorf(t, "hash.pairs has wrong length. got=%d", len(hash.pairs))
+	}
+
+	expected := map[string]i64 {
+		"one"   = 1,
+		"two"   = 2,
+		"three" = 3,
+	}
+	defer delete(expected)
+
+	for key, value in hash.pairs {
+		literal, ok := key.derived.(^ast.String_Literal)
+		if !ok {
+			testing.errorf(t, "key is not ^ast.String_Literal. got=%T", key.derived)
+		}
+
+		expected_value := expected[literal.value]
+
+		test_int_literal(t, value, expected_value)
+	}
+}
+
+test_parsing_empty_hash_literal :: proc(t: ^testing.T) {
+	input := "{}"
+
+	l := lexer.new_lexer(input)
+	defer lexer.delete_lexer(l)
+
+	p := new_parser(l)
+	defer delete_parser(p)
+
+	program := parse_program(p)
+	defer ast.delete_program(program)
+
+	check_parser_errors(t, p)
+
+	stmt := program.statements[0].derived.(^ast.Expr_Stmt)
+	hash, ok := stmt.expr.derived.(^ast.Hash_Literal)
+	if !ok {
+		fmt.panicf("exp not ^ast.Hash_Literal. got=%T", stmt.expr.derived)
+	}
+
+	if len(hash.pairs) != 0 {
+		testing.errorf(t, "hash.pairs has wrong length. got=%d", len(hash.pairs))
+	}
+}
+
+test_parsing_hash_literals_with_exprs :: proc(t: ^testing.T) {
+	input := `{"one": 0 + 1, "two": 10 - 8, "three": 15 / 5}`
+
+	l := lexer.new_lexer(input)
+	defer lexer.delete_lexer(l)
+
+	p := new_parser(l)
+	defer delete_parser(p)
+
+	program := parse_program(p)
+	defer ast.delete_program(program)
+
+	check_parser_errors(t, p)
+
+	stmt := program.statements[0].derived.(^ast.Expr_Stmt)
+	hash, ok := stmt.expr.derived.(^ast.Hash_Literal)
+	if !ok {
+		fmt.panicf("exp not ^ast.Hash_Literal. got=%T", stmt.expr.derived)
+	}
+
+	if len(hash.pairs) != 3 {
+		testing.errorf(t, "hash.pairs has wrong length. got=%d", len(hash.pairs))
+	}
+
+	tests := map[string]Types1 {
+		"one"   = {0, "+", 1},
+		"two"   = {10, "-", 8},
+		"three" = {15, "/", 5},
+	}
+	defer delete(tests)
+
+	for key, value in hash.pairs {
+		literal, ok := key.derived.(^ast.String_Literal)
+		if !ok {
+			testing.errorf(t, "key is not ^ast.String_Literal. got=%T", key.derived)
+			continue
+		}
+
+		expected := tests[literal.value]
+
+		test_int_literal(t, value.derived.(^ast.Infix_Expr).left, expected.first)
+
+		if value.derived.(^ast.Infix_Expr).operator != expected.operator {
+			testing.errorf(
+				t,
+				"value.derived.(^ast.Infix_Expr).operator is not '%s'. got='%s'",
+				expected.operator,
+				value.derived.(^ast.Infix_Expr).operator,
+			)
+		}
+
+		test_int_literal(t, value.derived.(^ast.Infix_Expr).right, expected.second)
+	}
+}
+
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
@@ -1223,4 +1352,15 @@ test_parser_main :: proc(t: ^testing.T) {
 	run_test(t, "[RUN] test_string_literal_expr", test_string_literal_expr)
 	run_test(t, "[RUN] test_parsing_array_literals", test_parsing_array_literals)
 	run_test(t, "[RUN] test_parsing_index_expr", test_parsing_index_expr)
+	run_test(
+		t,
+		"[RUN] test_parsing_hash_literals_string_keys",
+		test_parsing_hash_literals_string_keys,
+	)
+	run_test(t, "[RUN] test_parsing_empty_hash_literal", test_parsing_empty_hash_literal)
+	run_test(
+		t,
+		"[RUN] test_parsing_hash_literals_with_exprs",
+		test_parsing_hash_literals_with_exprs,
+	)
 }

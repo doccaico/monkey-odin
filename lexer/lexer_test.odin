@@ -328,7 +328,7 @@ test_next_token_string :: proc(t: ^testing.T) {
 
 test_next_token_array :: proc(t: ^testing.T) {
 	input := `
-    [1, 2];
+  [1, 2];
     `
 	tests := []struct {
 		expected_type:    TokenType,
@@ -342,6 +342,41 @@ test_next_token_array :: proc(t: ^testing.T) {
 		{SEMICOLON, ";"},
 		{EOF, ""},
 	}
+
+	l := new_lexer(input)
+	defer delete_lexer(l)
+
+	for tt, i in tests {
+		tok := next_token(l)
+
+		if tok.type != tt.expected_type {
+			fmt.panicf(
+				"tests[%d] - tokentype wrong. expected=%q, got=%q",
+				i,
+				tt.expected_type,
+				tok.type,
+			)
+		}
+
+		if tok.literal != tt.expected_literal {
+			fmt.panicf(
+				"tests[%d] - literal wrong. expected=%q, got=%q",
+				i,
+				tt.expected_literal,
+				tok.literal,
+			)
+		}
+	}
+}
+
+test_next_token_hash :: proc(t: ^testing.T) {
+	input := `
+  {"foo": "bar"}
+    `
+	tests := []struct {
+		expected_type:    TokenType,
+		expected_literal: string,
+	}{{LBRACE, "{"}, {STRING, "foo"}, {COLON, ":"}, {STRING, "bar"}, {RBRACE, "}"}, {EOF, ""}}
 
 	l := new_lexer(input)
 	defer delete_lexer(l)
@@ -399,11 +434,12 @@ test_lexer_main :: proc(t: ^testing.T) {
 		}
 	}
 
-	// run_test(t, "[RUN] test_next_token1", test_next_token1)
-	// run_test(t, "[RUN] test_next_token2", test_next_token2)
-	// run_test(t, "[RUN] test_next_token3", test_next_token3)
-	// run_test(t, "[RUN] test_next_token4", test_next_token4)
-	// run_test(t, "[RUN] test_next_token5", test_next_token5)
-	// run_test(t, "[RUN] test_next_token_string", test_next_token_string)
+	run_test(t, "[RUN] test_next_token1", test_next_token1)
+	run_test(t, "[RUN] test_next_token2", test_next_token2)
+	run_test(t, "[RUN] test_next_token3", test_next_token3)
+	run_test(t, "[RUN] test_next_token4", test_next_token4)
+	run_test(t, "[RUN] test_next_token5", test_next_token5)
+	run_test(t, "[RUN] test_next_token_string", test_next_token_string)
 	run_test(t, "[RUN] test_next_token_array", test_next_token_array)
+	run_test(t, "[RUN] test_next_token_hash", test_next_token_hash)
 }

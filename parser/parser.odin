@@ -73,6 +73,7 @@ new_parser :: proc(l: ^lexer.Lexer) -> ^Parser {
 	register_prefix(p, lexer.FUNCTION, parse_function_literal)
 	register_prefix(p, lexer.STRING, parse_string_literal)
 	register_prefix(p, lexer.LBRACKET, parse_array_literal)
+	register_prefix(p, lexer.LBRACE, parse_hash_literal)
 
 	register_infix(p, lexer.PLUS, parse_infix_expr)
 	register_infix(p, lexer.MINUS, parse_infix_expr)
@@ -460,6 +461,36 @@ parse_index_expr :: proc(p: ^Parser, left: ^ast.Expr) -> ^ast.Expr {
 	}
 
 	return expr
+}
+
+parse_hash_literal :: proc(p: ^Parser) -> ^ast.Expr {
+	hash := ast.new_node(ast.Hash_Literal)
+	hash.token = p.cur_token
+	hash.pairs = make(map[^ast.Expr]^ast.Expr)
+
+	for !peek_token_is(p, lexer.RBRACE) {
+		next_token(p)
+		key := parse_expr(p, .LOWEST)
+
+		if !expect_peek(p, lexer.COLON) {
+			return nil
+		}
+
+		next_token(p)
+		value := parse_expr(p, .LOWEST)
+
+		hash.pairs[key] = value
+
+		if !peek_token_is(p, lexer.RBRACE) && !expect_peek(p, lexer.COMMA) {
+			return nil
+		}
+	}
+
+	if !expect_peek(p, lexer.RBRACE) {
+		return nil
+	}
+
+	return hash
 }
 
 cur_token_is :: proc(p: ^Parser, t: lexer.TokenType) -> bool {

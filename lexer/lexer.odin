@@ -29,7 +29,7 @@ LBRACE :: "{"
 RBRACE :: "}"
 LBRACKET :: "["
 RBRACKET :: "]"
-// COLON :: ":"
+COLON :: ":"
 
 // Keywords
 FUNCTION :: "FUNCTION"
@@ -175,6 +175,9 @@ next_token :: proc(l: ^Lexer) -> Token {
 	case ']':
 		tok.type = RBRACKET
 		tok.literal = "]"
+	case ':':
+		tok.type = COLON
+		tok.literal = ":"
 	case:
 		if is_letter(l.ch) {
 			tok.literal = read_identifier(l)
