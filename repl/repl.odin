@@ -62,7 +62,8 @@ start :: proc(stdin: io.Stream, stdout: io.Stream) {
 		// io.write_rune(stdout, '\n')
 
 		evaluated := evaluator.eval(program, env)
-		if evaluated != evaluator.NULL {
+		// if evaluated != evaluator.NULL {
+		if evaluated != nil {
 			io.write_string(stdout, object.inspect(evaluated))
 			io.write_rune(stdout, '\n')
 		}

@@ -19,6 +19,11 @@ Types2 :: union #no_nil {
 	string,
 }
 
+Types3 :: union #no_nil {
+	i64,
+	[4]i64,
+}
+
 test_eval :: proc(input: string) -> ^object.Object {
 	l := lexer.new_lexer(input)
 	defer lexer.delete_lexer(l)
@@ -386,19 +391,19 @@ test_string_complex_cases :: proc(t: ^testing.T) {
 	} {
 		 {
 			`
-		let a = "A";
-		let b = "B";
-		let space = " ";
-		let concat = fn(a, b){ a + space + b };
-		concat(a, b);
+            let a = "A";
+            let b = "B";
+            let space = " ";
+            let concat = fn(a, b){ a + space + b };
+            concat(a, b);
 		`,
 			"A B",
 		},
 		 {
 			`
-    let makeGreeter = fn(greeting) { fn(name) { greeting + " " + name + "!" } };
-    let hello = makeGreeter("Hello");
-    hello("Thorsten");
+            let makeGreeter = fn(greeting) { fn(name) { greeting + " " + name + "!" } };
+            let hello = makeGreeter("Hello");
+            hello("Thorsten");
     `,
 			"Hello Thorsten!",
 		},
@@ -471,6 +476,97 @@ test_array_literals :: proc(t: ^testing.T) {
 	test_integer_object(t, result.elements[2], 6)
 }
 
+test_array_index_exprs :: proc(t: ^testing.T) {
+	tests := []struct {
+		input:    string,
+		expected: Types1,
+	} {
+		{"[1, 2, 3][0]", 1},
+		{"[1, 2, 3][1]", 2},
+		{"[1, 2, 3][2]", 3},
+		{"let i = 0; [1][i];", 1},
+		{"[1, 2, 3][1 + 1];", 3},
+		{"let myArray = [1, 2, 3]; myArray[2];", 3},
+		{"let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];", 6},
+		{"let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]", 2},
+		{"[1, 2, 3][3]", nil},
+		{"[1, 2, 3][-1]", nil},
+	}
+
+	for tt in tests {
+		evaluated := test_eval(tt.input)
+		switch e in tt.expected {
+		case i64:
+			test_integer_object(t, evaluated, tt.expected.(i64))
+		case:
+			test_null_object(t, evaluated)
+		}
+	}
+}
+
+test_array_complex_cases :: proc(t: ^testing.T) {
+	tests := []struct {
+		input:    string,
+		expected: Types3,
+	} {
+		 {
+			`
+            let map = fn(arr, f) {
+                let iter = fn(arr, accumulated) {
+                    if (len(arr) == 0) {
+                        accumulated
+                    } else {
+                        iter(rest(arr), push(accumulated, f(first(arr))));
+                    }
+                };
+
+                iter(arr, []);
+            };
+            let a = [1, 2, 3, 4];
+            let double = fn(x) { x * 2 };
+            map(a, double);
+        `,
+			[4]i64{2, 4, 6, 8},
+		},
+		 {
+			`
+            let reduce = fn(arr, initial, f) {
+                let iter = fn(arr, result) {
+                    if (len(arr) == 0) {
+                        result
+                    } else {
+                        iter(rest(arr), f(result, first(arr)));
+                    }
+                };
+
+                iter(arr, initial);
+            };
+            let sum = fn(arr) {
+                reduce(arr, 0, fn(initial, el) { initial + el });
+            };
+            sum([1, 2, 3, 4, 5]);
+            `,
+			15,
+		},
+	}
+
+	for tt in tests {
+		evaluated := test_eval(tt.input)
+		switch e in tt.expected {
+		case i64:
+			test_integer_object(t, evaluated, tt.expected.(i64))
+		case [4]i64:
+			for i in 0 ..< 4 {
+				test_integer_object(
+					t,
+					evaluated.derived.(^object.Array).elements[i],
+					tt.expected.([4]i64)[i],
+				)
+			}
+		}
+	}
+}
+
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
@@ -518,5 +614,7 @@ test_evaluator_main :: proc(t: ^testing.T) {
 	// run_test(t, "[RUN] test_string_concatenation", test_string_concatenation)
 	// run_test(t, "[RUN] test_string_complex_cases", test_string_complex_cases)
 	// run_test(t, "[RUN] test_builtin_functions", test_builtin_functions)
-	run_test(t, "[RUN] test_array_literals", test_array_literals)
+	// run_test(t, "[RUN] test_array_literals", test_array_literals)
+	// run_test(t, "[RUN] test_array_index_exprs", test_array_index_exprs)
+	run_test(t, "[RUN] test_array_complex_cases", test_array_complex_cases)
 }

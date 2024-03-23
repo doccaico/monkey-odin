@@ -95,11 +95,21 @@ eval :: proc(node: ast.Node, env: ^object.Environment) -> ^object.Object {
 		obj := object.new_object(object.Array)
 		obj.elements = elements
 		return obj
+	case ^ast.Index_Expr:
+		left := eval(v.left, env)
+		if is_error(left) {
+			return left
+		}
+		index := eval(v.index, env)
+		if is_error(index) {
+			return index
+		}
+		return eval_index_expr(left, index)
 	case:
 		panic("eval: unknown node type")
 	}
 
-	return NULL
+	return nil
 }
 
 eval_program :: proc(program: ^ast.Program, env: ^object.Environment) -> ^object.Object {
@@ -107,6 +117,11 @@ eval_program :: proc(program: ^ast.Program, env: ^object.Environment) -> ^object
 
 	for stmt in program.statements {
 		result = eval(stmt, env)
+
+		if result == nil {
+			continue
+		}
+
 		#partial switch v in result.derived {
 		case ^object.Return_Value:
 			return v.value
@@ -187,6 +202,11 @@ delete_eval :: proc() {
 
 	object.delete_object()
 	delete(object.object_array)
+
+	for elements in allocated_array {
+		delete(elements)
+	}
+	delete(allocated_array)
 
 	delete(builtins)
 }
@@ -400,6 +420,26 @@ eval_string_infix_expr :: proc(
 	return obj
 }
 
+eval_index_expr :: proc(left: ^object.Object, index: ^object.Object) -> ^object.Object {
+	switch {
+	case object.type(left) == object.ARRAY_OBJ && object.type(index) == object.INTEGER_OBJ:
+		return eval_array_index_expr(left, index)
+	case:
+		return new_error("index operator not supported: %s", object.type(left))
+	}
+}
+
+eval_array_index_expr :: proc(array: ^object.Object, index: ^object.Object) -> ^object.Object {
+	array_obj := array.derived.(^object.Array)
+	idx := index.derived.(^object.Integer).value
+	max := cast(i64)(len(array_obj.elements) - 1)
+
+	if idx < 0 || idx > max {
+		return NULL
+	}
+
+	return array_obj.elements[idx]
+}
 
 is_truthy :: proc(obj: ^object.Object) -> bool {
 	switch obj {

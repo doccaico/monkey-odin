@@ -269,6 +269,9 @@ free_expr_stmt :: proc(expr: ^Expr) {
 			#partial switch t in stmt.derived {
 			case ^Expr_Stmt:
 				free_expr_stmt(t.expr)
+			case ^Let_Stmt:
+				free(t.name)
+				free_expr_stmt(t.value)
 			case ^Return_Stmt:
 				free_expr_stmt(t.return_value)
 			}
