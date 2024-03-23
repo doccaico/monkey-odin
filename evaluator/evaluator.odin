@@ -1,5 +1,6 @@
 package evaluator
 
+import "core:bytes"
 import "core:fmt"
 import "core:strings"
 // import "core:bytes"
@@ -13,6 +14,7 @@ FALSE: ^object.Boolean
 NULL: ^object.Null
 
 args_array: [dynamic][dynamic]^object.Object
+elements_array: [dynamic][dynamic]^object.Object
 env_array: [dynamic]^object.Environment
 
 eval :: proc(node: ast.Node, env: ^object.Environment) -> ^object.Object {
@@ -83,6 +85,15 @@ eval :: proc(node: ast.Node, env: ^object.Environment) -> ^object.Object {
 	case ^ast.String_Literal:
 		obj := object.new_object(object.String)
 		obj.value = v.value
+		return obj
+	case ^ast.Array_Literal:
+		elements := eval_exprs(v.elements, env)
+		append(&elements_array, elements)
+		if len(elements) == 1 && is_error(elements[0]) {
+			return elements[0]
+		}
+		obj := object.new_object(object.Array)
+		obj.elements = elements
 		return obj
 	case:
 		panic("eval: unknown node type")
@@ -158,11 +169,21 @@ delete_eval :: proc() {
 	}
 	delete(args_array)
 
+	for elements in elements_array {
+		delete(elements)
+	}
+	delete(elements_array)
+
 	for env in env_array {
 		delete(env.store)
 		free(env)
 	}
 	delete(env_array)
+
+	for buffer in &object.buffer_array {
+		bytes.buffer_destroy(&buffer)
+	}
+	delete(object.buffer_array)
 
 	object.delete_object()
 	delete(object.object_array)

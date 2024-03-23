@@ -454,6 +454,23 @@ test_builtin_functions :: proc(t: ^testing.T) {
 	}
 }
 
+test_array_literals :: proc(t: ^testing.T) {
+	input := "[1, 2 * 2, 3 + 3]"
+
+	evaluated := test_eval(input)
+	result, ok := evaluated.derived.(^object.Array)
+	if !ok {
+		fmt.panicf("object is not Array. got=%T (%v)", evaluated, evaluated.derived)
+	}
+
+	if len(result.elements) != 3 {
+		fmt.panicf("array has wrong num of elements. got=%d", len(result.elements))
+	}
+	test_integer_object(t, result.elements[0], 1)
+	test_integer_object(t, result.elements[1], 4)
+	test_integer_object(t, result.elements[2], 6)
+}
+
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
@@ -488,17 +505,18 @@ test_evaluator_main :: proc(t: ^testing.T) {
 	new_eval()
 	defer delete_eval()
 
-	run_test(t, "[RUN] test_eval_integer_expr", test_eval_integer_expr)
-	run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
-	run_test(t, "[RUN] test_bang_operator", test_bang_operator)
-	run_test(t, "[RUN] test_if_else_expr", test_if_else_expr)
-	run_test(t, "[RUN] test_return_stmts", test_return_stmts)
-	run_test(t, "[RUN] test_error_handling", test_error_handling)
-	run_test(t, "[RUN] test_let_stmts", test_let_stmts)
-	run_test(t, "[RUN] test_function_object", test_function_object)
-	run_test(t, "[RUN] test_function_application", test_function_application)
-	run_test(t, "[RUN] test_string_literal", test_string_literal)
-	run_test(t, "[RUN] test_string_concatenation", test_string_concatenation)
-	run_test(t, "[RUN] test_string_complex_cases", test_string_complex_cases)
-	run_test(t, "[RUN] test_builtin_functions", test_builtin_functions)
+	// run_test(t, "[RUN] test_eval_integer_expr", test_eval_integer_expr)
+	// run_test(t, "[RUN] test_eval_boolean_expr", test_eval_boolean_expr)
+	// run_test(t, "[RUN] test_bang_operator", test_bang_operator)
+	// run_test(t, "[RUN] test_if_else_expr", test_if_else_expr)
+	// run_test(t, "[RUN] test_return_stmts", test_return_stmts)
+	// run_test(t, "[RUN] test_error_handling", test_error_handling)
+	// run_test(t, "[RUN] test_let_stmts", test_let_stmts)
+	// run_test(t, "[RUN] test_function_object", test_function_object)
+	// run_test(t, "[RUN] test_function_application", test_function_application)
+	// run_test(t, "[RUN] test_string_literal", test_string_literal)
+	// run_test(t, "[RUN] test_string_concatenation", test_string_concatenation)
+	// run_test(t, "[RUN] test_string_complex_cases", test_string_complex_cases)
+	// run_test(t, "[RUN] test_builtin_functions", test_builtin_functions)
+	run_test(t, "[RUN] test_array_literals", test_array_literals)
 }

@@ -15,11 +15,12 @@ ERROR_OBJ :: "ERROR"
 FUNCTION_OBJ :: "FUNCTION"
 STRING_OBJ :: "STRING"
 BUILTIN_OBJ :: "BUILTIN"
+ARRAY_OBJ :: "ARRAY"
 
 BuiltinFunction :: proc(args: [dynamic]^Object) -> ^Object
 
 object_array: [dynamic]^Object
-
+buffer_array: [dynamic]bytes.Buffer
 
 Any_Obj :: union {
 	^Integer,
@@ -30,7 +31,7 @@ Any_Obj :: union {
 	^Function,
 	^String,
 	^Builtin,
-	// ^Array,
+	^Array,
 	// ^Hash_Map,
 }
 
@@ -82,6 +83,11 @@ Builtin :: struct {
 	fn:        BuiltinFunction,
 }
 
+Array :: struct {
+	using obj: Object,
+	elements:  [dynamic]^Object,
+}
+
 new_object :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
 	obj := new(T)
 	obj.derived = obj
@@ -130,6 +136,8 @@ delete_object :: proc() {
 				delete(v.value)
 			}
 			free(v)
+		case ^Array:
+			free(v)
 		case:
 			panic("delete_object: unknown object type")
 		}
@@ -139,6 +147,8 @@ delete_object :: proc() {
 add_object :: proc(obj: ^Object) {
 	append(&object_array, obj)
 }
+
+// type
 
 type :: proc(obj: ^Object) -> ObjectType {
 	switch v in obj.derived {
@@ -158,6 +168,8 @@ type :: proc(obj: ^Object) -> ObjectType {
 		return string_type(v)
 	case ^Builtin:
 		return builtin_type(v)
+	case ^Array:
+		return array_type(v)
 	case:
 		panic("type: unknown object type")
 	}
@@ -195,6 +207,12 @@ builtin_type :: proc(obj: ^Builtin) -> ObjectType {
 	return BUILTIN_OBJ
 }
 
+array_type :: proc(obj: ^Array) -> ObjectType {
+	return ARRAY_OBJ
+}
+
+// inspect
+
 inspect :: proc(obj: ^Object) -> string {
 	switch v in obj.derived {
 	case ^Integer:
@@ -213,6 +231,8 @@ inspect :: proc(obj: ^Object) -> string {
 		return string_inspect(v)
 	case ^Builtin:
 		return builtin_inspect(v)
+	case ^Array:
+		return array_inspect(v)
 	case:
 		panic("inspect: unknown object type")
 	}
@@ -245,7 +265,6 @@ function_inspect :: proc(obj: ^Function) -> string {
 	defer delete(params)
 
 	for p in obj.parameters {
-
 		buf := ast.to_string(p)
 		defer bytes.buffer_destroy(&buf)
 		append(&params, bytes.buffer_to_string(&buf))
@@ -275,4 +294,29 @@ string_inspect :: proc(obj: ^String) -> string {
 
 builtin_inspect :: proc(obj: ^Builtin) -> string {
 	return "builtin function"
+}
+
+array_inspect :: proc(obj: ^Array) -> string {
+	out: bytes.Buffer
+
+	elements: [dynamic]string
+	defer delete(elements)
+
+	for e in obj.elements {
+		append(&elements, inspect(e))
+	}
+
+	bytes.buffer_write_string(&out, "[")
+
+	s := strings.join(elements[:], ", ")
+	bytes.buffer_write_string(&out, s)
+	delete(s)
+
+	bytes.buffer_write_string(&out, "]")
+
+
+	// fmt.printf("%p\n", out.buf)
+	append(&buffer_array, out)
+
+	return bytes.buffer_to_string(&out)
 }
