@@ -3,8 +3,6 @@ package evaluator
 import "core:bytes"
 import "core:fmt"
 import "core:strings"
-// import "core:bytes"
-// import "core:mem"
 
 import "../ast"
 import "../object"

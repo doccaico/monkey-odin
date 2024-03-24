@@ -7,7 +7,6 @@ import "core:intrinsics"
 import "core:strings"
 
 import "../ast"
-// import "../evaluator"
 
 INTEGER_OBJ :: "INTEGER"
 BOOLEAN_OBJ :: "BOOLEAN"
@@ -24,7 +23,6 @@ BuiltinFunction :: proc(args: [dynamic]^Object) -> ^Object
 
 object_array: [dynamic]^Object
 buffer_array: [dynamic]bytes.Buffer
-// hash_null: ^Object.Null
 
 Any_Obj :: union {
 	^Integer,
@@ -106,17 +104,6 @@ Hash_Pair :: struct {
 	key:   ^Object,
 	value: ^Object,
 }
-
-// Hashable :: struct {
-// 	derived_base:     Any_Obj,
-// 	derived_hashable: Any_Hashable,
-// }
-
-// Any_Hashable :: union {
-// 	^Boolean,
-// 	^Integer,
-// 	^String,
-// }
 
 new_object :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
 	obj := new(T)
@@ -355,6 +342,8 @@ function_inspect :: proc(obj: ^Function) -> string {
 	bytes.buffer_write(&out, bytes.buffer_to_bytes(&buf))
 
 	bytes.buffer_write_string(&out, "\n}")
+
+	append(&buffer_array, out)
 
 	return bytes.buffer_to_string(&out)
 }

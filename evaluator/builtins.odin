@@ -15,6 +15,7 @@ init_builtin_functions :: proc() -> map[string]^object.Builtin {
 		"last"  = builtin_function_last,
 		"rest"  = builtin_function_rest,
 		"push"  = builtin_function_push,
+		"puts"  = builtin_function_puts,
 	}
 	defer delete(bfs)
 
@@ -129,4 +130,11 @@ builtin_function_push :: proc(args: [dynamic]^object.Object) -> ^object.Object {
 	obj := object.new_object(object.Array)
 	obj.elements = new_elements
 	return obj
+}
+
+builtin_function_puts :: proc(args: [dynamic]^object.Object) -> ^object.Object {
+	for arg in args {
+		fmt.println(object.inspect(arg))
+	}
+	return NULL
 }
