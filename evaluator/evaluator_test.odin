@@ -567,6 +567,97 @@ test_array_complex_cases :: proc(t: ^testing.T) {
 	}
 }
 
+test_string_hash_key :: proc(t: ^testing.T) {
+	// hello1
+	hello1 := object.new_object(object.String)
+	hello1.value = "Hello World"
+	// hello2
+	hello2 := object.new_object(object.String)
+	hello2.value = "Hello World"
+	// diff1
+	diff1 := object.new_object(object.String)
+	diff1.value = "My name is johnny"
+	// diff2
+	diff2 := object.new_object(object.String)
+	diff2.value = "My name is johnny"
+
+	if object.hash_key(hello1) != object.hash_key(hello2) {
+		testing.errorf(t, "strings with same content have different hash keys")
+	}
+	if object.hash_key(diff1) != object.hash_key(diff2) {
+		testing.errorf(t, "strings with same content have different hash keys")
+	}
+	if object.hash_key(hello1) == object.hash_key(diff1) {
+		testing.errorf(t, "strings with different content have same hash keys")
+	}
+}
+
+test_hash_literals :: proc(t: ^testing.T) {
+	input := `
+	let two = "two";
+	{
+	    "one": 10 - 9,
+	    two: 1 + 1,
+	    "thr" + "ee": 6 / 2,
+	    4: 4,
+	    true: 5,
+	    false: 6
+	}
+	`
+
+	evaluated := test_eval(input)
+	result, ok := evaluated.derived.(^object.Hash)
+	if !ok {
+		fmt.panicf("eval didn't return Hash. got=%T (%v)", evaluated, evaluated.derived)
+	}
+
+	v1 := object.new_object(object.String)
+	v1.value = "one"
+	vk1 := object.hash_key(v1)
+
+	v2 := object.new_object(object.String)
+	v2.value = "two"
+	vk2 := object.hash_key(v2)
+
+
+	v3 := object.new_object(object.String)
+	v3.value = "three"
+	vk3 := object.hash_key(v3)
+
+	v4 := object.new_object(object.Integer)
+	v4.value = 4
+	vk4 := object.hash_key(v4)
+
+	v5 := TRUE
+	vk5 := object.hash_key(v5)
+
+	v6 := FALSE
+	vk6 := object.hash_key(v6)
+
+	expected := map[object.Hash_Key]i64 {
+		vk1 = 1,
+		vk2 = 2,
+		vk3 = 3,
+		vk4 = 4,
+		vk5 = 5,
+		vk6 = 6,
+	}
+	defer delete(expected)
+
+	if len(result.pairs) != len(expected) {
+		fmt.panicf("Hash has wrong num of pairs. got=%d", len(result.pairs))
+	}
+
+	for expected_key, expected_value in expected {
+		pair, ok := result.pairs[expected_key]
+		if !ok {
+			testing.errorf(t, "no pair for given key in Pairs")
+		}
+
+		test_integer_object(t, pair.value, expected_value)
+	}
+}
+
 run_test :: proc(t: ^testing.T, msg: string, func: proc(t: ^testing.T)) {
 	fmt.println(msg)
 	func(t)
@@ -616,5 +707,7 @@ test_evaluator_main :: proc(t: ^testing.T) {
 	// run_test(t, "[RUN] test_builtin_functions", test_builtin_functions)
 	// run_test(t, "[RUN] test_array_literals", test_array_literals)
 	// run_test(t, "[RUN] test_array_index_exprs", test_array_index_exprs)
-	run_test(t, "[RUN] test_array_complex_cases", test_array_complex_cases)
+	// run_test(t, "[RUN] test_array_complex_cases", test_array_complex_cases)
+	// run_test(t, "[RUN] test_string_hash_key", test_string_hash_key)
+	run_test(t, "[RUN] test_hash_literals", test_hash_literals)
 }

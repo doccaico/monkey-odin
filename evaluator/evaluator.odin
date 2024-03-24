@@ -105,6 +105,8 @@ eval :: proc(node: ast.Node, env: ^object.Environment) -> ^object.Object {
 			return index
 		}
 		return eval_index_expr(left, index)
+	case ^ast.Hash_Literal:
+		return eval_hash_literal(v, env)
 	case:
 		panic("eval: unknown node type")
 	}
@@ -439,6 +441,45 @@ eval_array_index_expr :: proc(array: ^object.Object, index: ^object.Object) -> ^
 	}
 
 	return array_obj.elements[idx]
+}
+
+eval_hash_literal :: proc(node: ^ast.Hash_Literal, env: ^object.Environment) -> ^object.Object {
+	pairs := make(map[object.Hash_Key]object.Hash_Pair)
+
+	for key_node, value_node in node.pairs {
+		key := eval(key_node, env)
+		if is_error(key) {
+			return key
+		}
+
+		hk: ^object.Object
+		#partial switch v in key.derived {
+		case ^object.Boolean:
+			hk = v
+		case ^object.Integer:
+			hk = v
+		case ^object.String:
+			hk = v
+		case:
+			return new_error("unusable as hash key: %s", object.type(key))
+		}
+
+		value := eval(value_node, env)
+		if is_error(value) {
+			return value
+		}
+
+		hashed := object.hash_key(hk)
+		pairs[hashed] = object.Hash_Pair {
+			key   = key,
+			value = value,
+		}
+	}
+
+	obj := object.new_object(object.Hash)
+	obj.pairs = pairs
+
+	return obj
 }
 
 is_truthy :: proc(obj: ^object.Object) -> bool {

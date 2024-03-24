@@ -2,10 +2,12 @@ package object
 
 import "core:bytes"
 import "core:fmt"
+import "core:hash"
 import "core:intrinsics"
 import "core:strings"
 
 import "../ast"
+// import "../evaluator"
 
 INTEGER_OBJ :: "INTEGER"
 BOOLEAN_OBJ :: "BOOLEAN"
@@ -16,11 +18,13 @@ FUNCTION_OBJ :: "FUNCTION"
 STRING_OBJ :: "STRING"
 BUILTIN_OBJ :: "BUILTIN"
 ARRAY_OBJ :: "ARRAY"
+HASH_OBJ :: "HASH"
 
 BuiltinFunction :: proc(args: [dynamic]^Object) -> ^Object
 
 object_array: [dynamic]^Object
 buffer_array: [dynamic]bytes.Buffer
+// hash_null: ^Object.Null
 
 Any_Obj :: union {
 	^Integer,
@@ -32,7 +36,7 @@ Any_Obj :: union {
 	^String,
 	^Builtin,
 	^Array,
-	// ^Hash_Map,
+	^Hash,
 }
 
 ObjectType :: distinct string
@@ -88,6 +92,32 @@ Array :: struct {
 	elements:  [dynamic]^Object,
 }
 
+Hash :: struct {
+	using obj: Object,
+	pairs:     map[Hash_Key]Hash_Pair,
+}
+
+Hash_Key :: struct {
+	type:  ObjectType,
+	value: u64,
+}
+
+Hash_Pair :: struct {
+	key:   ^Object,
+	value: ^Object,
+}
+
+// Hashable :: struct {
+// 	derived_base:     Any_Obj,
+// 	derived_hashable: Any_Hashable,
+// }
+
+// Any_Hashable :: union {
+// 	^Boolean,
+// 	^Integer,
+// 	^String,
+// }
+
 new_object :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived") {
 	obj := new(T)
 	obj.derived = obj
@@ -138,6 +168,9 @@ delete_object :: proc() {
 			free(v)
 		case ^Array:
 			free(v)
+		case ^Hash:
+			delete(v.pairs)
+			free(v)
 		case:
 			panic("delete_object: unknown object type")
 		}
@@ -146,6 +179,36 @@ delete_object :: proc() {
 
 add_object :: proc(obj: ^Object) {
 	append(&object_array, obj)
+}
+
+hash_key :: proc(obj: ^Object) -> Hash_Key {
+	#partial switch v in obj.derived {
+	case ^Boolean:
+		return hash_key_boolean(v)
+	case ^Integer:
+		return hash_key_integer(v)
+	case ^String:
+		return hash_key_string(v)
+	case:
+		return hash_key_null()
+	}
+}
+
+hash_key_boolean :: proc(obj: ^Boolean) -> Hash_Key {
+	return Hash_Key{type = type(obj), value = obj.value ? 1 : 0}
+}
+
+hash_key_integer :: proc(obj: ^Integer) -> Hash_Key {
+	return Hash_Key{type = type(obj), value = cast(u64)obj.value}
+}
+
+hash_key_string :: proc(obj: ^String) -> Hash_Key {
+	buf := transmute([]u8)obj.value
+	return Hash_Key{type = type(obj), value = hash.fnv64a(buf)}
+}
+
+hash_key_null :: proc() -> Hash_Key {
+	return Hash_Key{type = "", value = 0}
 }
 
 // type
@@ -170,6 +233,8 @@ type :: proc(obj: ^Object) -> ObjectType {
 		return builtin_type(v)
 	case ^Array:
 		return array_type(v)
+	case ^Hash:
+		return hash_type(v)
 	case:
 		panic("type: unknown object type")
 	}
@@ -211,6 +276,10 @@ array_type :: proc(obj: ^Array) -> ObjectType {
 	return ARRAY_OBJ
 }
 
+hash_type :: proc(obj: ^Hash) -> ObjectType {
+	return HASH_OBJ
+}
+
 // inspect
 
 inspect :: proc(obj: ^Object) -> string {
@@ -233,6 +302,8 @@ inspect :: proc(obj: ^Object) -> string {
 		return builtin_inspect(v)
 	case ^Array:
 		return array_inspect(v)
+	case ^Hash:
+		return hash_inspect(v)
 	case:
 		panic("inspect: unknown object type")
 	}
@@ -314,8 +385,31 @@ array_inspect :: proc(obj: ^Array) -> string {
 
 	bytes.buffer_write_string(&out, "]")
 
+	append(&buffer_array, out)
 
-	// fmt.printf("%p\n", out.buf)
+	return bytes.buffer_to_string(&out)
+}
+
+hash_inspect :: proc(obj: ^Hash) -> string {
+	out: bytes.Buffer
+
+	pairs: [dynamic]string
+	defer delete(pairs)
+
+	for _, pair in obj.pairs {
+		key := inspect(pair.key)
+		value := inspect(pair.value)
+		append(&pairs, fmt.tprintf("%s: %s", key, value))
+	}
+
+	bytes.buffer_write_string(&out, "{")
+
+	s := strings.join(pairs[:], ", ")
+	bytes.buffer_write_string(&out, s)
+	delete(s)
+
+	bytes.buffer_write_string(&out, "}")
+
 	append(&buffer_array, out)
 
 	return bytes.buffer_to_string(&out)
