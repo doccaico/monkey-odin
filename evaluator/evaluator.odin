@@ -426,6 +426,8 @@ eval_index_expr :: proc(left: ^object.Object, index: ^object.Object) -> ^object.
 	switch {
 	case object.type(left) == object.ARRAY_OBJ && object.type(index) == object.INTEGER_OBJ:
 		return eval_array_index_expr(left, index)
+	case object.type(left) == object.HASH_OBJ:
+		return eval_hash_index_expr(left, index)
 	case:
 		return new_error("index operator not supported: %s", object.type(left))
 	}
@@ -480,6 +482,28 @@ eval_hash_literal :: proc(node: ^ast.Hash_Literal, env: ^object.Environment) -> 
 	obj.pairs = pairs
 
 	return obj
+}
+
+eval_hash_index_expr :: proc(hash: ^object.Object, index: ^object.Object) -> ^object.Object {
+	hash_obj := hash.derived.(^object.Hash)
+
+	key: ^object.Object
+	#partial switch v in index.derived {
+	case ^object.Boolean:
+		key = v
+	case ^object.Integer:
+		key = v
+	case ^object.String:
+		key = v
+	case:
+		return new_error("unusable as hash key: %s", object.type(index))
+	}
+
+	pair, ok := hash_obj.pairs[object.hash_key(key)]
+	if !ok {
+		return NULL
+	}
+	return pair.value
 }
 
 is_truthy :: proc(obj: ^object.Object) -> bool {
