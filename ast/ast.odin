@@ -174,46 +174,15 @@ new_node :: proc($T: typeid) -> ^T where intrinsics.type_has_field(T, "derived")
 }
 
 delete_program :: proc(program: ^Program) {
-	// fmt.println("In [Fn] delete_program")
 	for stmt in program.statements {
-		// #partial switch t in stmt.expr_base.derived {
 		#partial switch t in stmt.derived {
-		// case ^Program:
-		// 	fmt.println("In Program")
 		case ^Expr_Stmt:
 			free_expr_stmt(t.expr)
 		case ^Let_Stmt:
-			// fmt.println(">>>>>> In Let_Stmt")
 			free(t.name)
 			free_expr_stmt(t.value)
 		case ^Return_Stmt:
 			free_expr_stmt(t.return_value)
-		// case ^Ident:
-		// 	fmt.printf("In Ident %s\n", t.value)
-		// case ^Prefix_Expr:
-		// 	fmt.println("In Prefix_Expr")
-		// 	free(t.right)
-		// case ^Int_Literal:
-		// 	fmt.printf("----------- Int_Literaln\n")
-
-		// return int_literal_string(v)
-		// case ^Block_Stmt:
-		// 	fmt.printf("In Block_Stmt")
-		// return block_stmt_string(v)
-		// return ident_token_literal(v)
-		// case ^String_Literal: return string_literal_string(v)
-		// return bool_literal_string(v)
-		// case ^Bool_Literal:
-		// 	fmt.printf("bool literal\n")
-		// case ^Infix_Expr:
-		// 	fmt.println("Infix_Expr")
-		// case ^If_Expr:
-		// 	fmt.println("If_Expr")
-		// case ^Function_Literal: return function_expr_string(v)
-		// case ^Call_Expr: return call_expr_string(v)
-		// case ^Array_Literal: return array_expr_string(v)
-		// case ^Index_Expr: return index_expr_string(v)
-		// case ^Hash_Literal: return hash_expr_string(v)
 		case:
 			panic("delete_program: unknown node type")
 		}
@@ -224,8 +193,6 @@ delete_program :: proc(program: ^Program) {
 }
 
 free_expr_stmt :: proc(expr: ^Expr) {
-
-	// fmt.println(expr.expr_base.derived)
 	#partial switch t in expr.expr_base.derived {
 	case ^Prefix_Expr:
 		free_expr_stmt(t.right)
@@ -792,7 +759,7 @@ hash_literal_to_string :: proc(e: ^Hash_Literal) -> bytes.Buffer {
 		bytes.buffer_write(&out, bytes.buffer_to_bytes(&value_buf))
 
 		s := strings.join(
-			[]string{bytes.buffer_to_string(&key_buf), ":", bytes.buffer_to_string(&value_buf)}, // []string{bytes.buffer_to_bytes(&key_buf), ":", bytes.buffer_to_bytes(&value_buf)},
+			[]string{bytes.buffer_to_string(&key_buf), ":", bytes.buffer_to_string(&value_buf)},
 			"",
 		)
 		defer delete(s)

@@ -1,9 +1,8 @@
 package repl
 
 import "core:bufio"
-import "core:fmt"
 import "core:io"
-// import "core:bytes"
+// import "core:fmt"
 
 import "../ast"
 import "../evaluator"
@@ -46,23 +45,13 @@ start :: proc(stdin: io.Stream, stdout: io.Stream) {
 		defer parser.delete_parser(p)
 
 		program = parser.parse_program(p)
-		// program := parser.parse_program(p)
-		// defer ast.delete_program(program)
 
 		if len(parser.errors(p)) != 0 {
 			print_parser_errors(stdout, parser.errors(p))
 			continue
 		}
 
-		// buf := ast.to_string(program)
-		// defer bytes.buffer_destroy(&buf)
-		// s := bytes.buffer_to_string(&buf)
-		//
-		// io.write_string(stdout, s)
-		// io.write_rune(stdout, '\n')
-
 		evaluated := evaluator.eval(program, env)
-		// if evaluated != evaluator.NULL {
 		if evaluated != nil {
 			io.write_string(stdout, object.inspect(evaluated))
 			io.write_rune(stdout, '\n')

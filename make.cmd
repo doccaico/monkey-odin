@@ -48,16 +48,11 @@ goto :EOF
   odin test evaluator -debug
 goto :EOF
 
-REM :OBJECT
-REM   odin test object -debug
-REM goto :EOF
-
 :TEST_ALL
   odin test lexer -debug
   odin test parser -debug
   odin test ast -debug
   odin test evaluator -debug
-  REM odin test object -debug
 goto :EOF
 
 REM vim: foldmethod=marker ft=dosbatch fenc=cp932 ff=dos
